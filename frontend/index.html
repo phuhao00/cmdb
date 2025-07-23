@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CMDB - Configuration Management Database</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="nav-container">
+                <h1 class="nav-logo"><i class="fas fa-database"></i> CMDB</h1>
+                <ul class="nav-menu">
+                    <li class="nav-item"><a href="#dashboard" class="nav-link">Dashboard</a></li>
+                    <li class="nav-item"><a href="#assets" class="nav-link">Assets</a></li>
+                    <li class="nav-item"><a href="#workflows" class="nav-link">Workflows</a></li>
+                    <li class="nav-item"><a href="#reports" class="nav-link">Reports</a></li>
+                </ul>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Dashboard Section -->
+        <section id="dashboard" class="dashboard">
+            <div class="container">
+                <h2>CMDB Dashboard</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-server"></i></div>
+                        <div class="stat-info">
+                            <h3 id="total-assets">1,247</h3>
+                            <p>Total Assets</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon online"><i class="fas fa-check-circle"></i></div>
+                        <div class="stat-info">
+                            <h3 id="online-assets">1,156</h3>
+                            <p>Online Assets</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon offline"><i class="fas fa-times-circle"></i></div>
+                        <div class="stat-info">
+                            <h3 id="offline-assets">91</h3>
+                            <p>Offline Assets</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon pending"><i class="fas fa-clock"></i></div>
+                        <div class="stat-info">
+                            <h3 id="pending-approvals">23</h3>
+                            <p>Pending Approvals</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Asset Management Section -->
+        <section id="assets" class="assets">
+            <div class="container">
+                <div class="section-header">
+                    <h2>Asset Management</h2>
+                    <button class="btn btn-primary" onclick="openAssetModal()">
+                        <i class="fas fa-plus"></i> Add Asset
+                    </button>
+                </div>
+
+                <!-- Asset Filters -->
+                <div class="filters">
+                    <select id="status-filter" onchange="filterAssets()">
+                        <option value="">All Status</option>
+                        <option value="online">Online</option>
+                        <option value="offline">Offline</option>
+                        <option value="maintenance">Maintenance</option>
+                        <option value="decommissioned">Decommissioned</option>
+                    </select>
+                    <select id="type-filter" onchange="filterAssets()">
+                        <option value="">All Types</option>
+                        <option value="server">Server</option>
+                        <option value="network">Network Device</option>
+                        <option value="storage">Storage</option>
+                        <option value="workstation">Workstation</option>
+                    </select>
+                    <input type="text" id="search-input" placeholder="Search assets..." onkeyup="filterAssets()">
+                </div>
+
+                <!-- Asset Table -->
+                <div class="table-container">
+                    <table class="asset-table">
+                        <thead>
+                            <tr>
+                                <th>Asset ID</th>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Location</th>
+                                <th>Last Updated</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="asset-table-body">
+                            <!-- Assets will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Workflow Section -->
+        <section id="workflows" class="workflows">
+            <div class="container">
+                <h2>Feishu Approval Workflows</h2>
+                <div class="workflow-grid">
+                    <div class="workflow-card">
+                        <h3><i class="fas fa-upload"></i> Asset Onboarding</h3>
+                        <p>Submit new assets for approval and inventory registration</p>
+                        <button class="btn btn-secondary" onclick="startWorkflow('onboarding')">Start Workflow</button>
+                    </div>
+                    <div class="workflow-card">
+                        <h3><i class="fas fa-power-off"></i> Asset Decommission</h3>
+                        <p>Request asset decommissioning and removal from inventory</p>
+                        <button class="btn btn-secondary" onclick="startWorkflow('decommission')">Start Workflow</button>
+                    </div>
+                    <div class="workflow-card">
+                        <h3><i class="fas fa-tools"></i> Maintenance Request</h3>
+                        <p>Schedule maintenance and update asset status</p>
+                        <button class="btn btn-secondary" onclick="startWorkflow('maintenance')">Start Workflow</button>
+                    </div>
+                    <div class="workflow-card">
+                        <h3><i class="fas fa-exchange-alt"></i> Status Change</h3>
+                        <p>Request asset status changes (online/offline)</p>
+                        <button class="btn btn-secondary" onclick="startWorkflow('status-change')">Start Workflow</button>
+                    </div>
+                </div>
+
+                <!-- Pending Approvals -->
+                <div class="pending-approvals">
+                    <h3>Pending Approvals</h3>
+                    <div class="approval-list" id="approval-list">
+                        <!-- Approvals will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Reports Section -->
+        <section id="reports" class="reports">
+            <div class="container">
+                <h2>Reports & Analytics</h2>
+                <div class="report-grid">
+                    <div class="report-card">
+                        <h3>Asset Inventory Report</h3>
+                        <p>Complete inventory of all assets with current status</p>
+                        <button class="btn btn-outline" onclick="generateReport('inventory')">Generate Report</button>
+                    </div>
+                    <div class="report-card">
+                        <h3>Lifecycle Management</h3>
+                        <p>Asset lifecycle tracking and maintenance schedules</p>
+                        <button class="btn btn-outline" onclick="generateReport('lifecycle')">Generate Report</button>
+                    </div>
+                    <div class="report-card">
+                        <h3>Compliance Audit</h3>
+                        <p>Compliance status and audit trail reports</p>
+                        <button class="btn btn-outline" onclick="generateReport('compliance')">Generate Report</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Asset Modal -->
+    <div id="asset-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Add New Asset</h3>
+                <span class="close" onclick="closeAssetModal()">&times;</span>
+            </div>
+            <form id="asset-form" onsubmit="submitAsset(event)">
+                <div class="form-group">
+                    <label for="asset-name">Asset Name *</label>
+                    <input type="text" id="asset-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="asset-type">Asset Type *</label>
+                    <select id="asset-type" required>
+                        <option value="">Select Type</option>
+                        <option value="server">Server</option>
+                        <option value="network">Network Device</option>
+                        <option value="storage">Storage</option>
+                        <option value="workstation">Workstation</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="asset-location">Location *</label>
+                    <input type="text" id="asset-location" required>
+                </div>
+                <div class="form-group">
+                    <label for="asset-description">Description</label>
+                    <textarea id="asset-description" rows="3"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeAssetModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Submit for Approval</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Workflow Modal -->
+    <div id="workflow-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="workflow-title">Start Workflow</h3>
+                <span class="close" onclick="closeWorkflowModal()">&times;</span>
+            </div>
+            <form id="workflow-form" onsubmit="submitWorkflow(event)">
+                <div class="form-group">
+                    <label for="workflow-asset">Select Asset</label>
+                    <select id="workflow-asset" required>
+                        <option value="">Select Asset</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="workflow-reason">Reason *</label>
+                    <textarea id="workflow-reason" rows="3" required placeholder="Please provide reason for this request..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="workflow-priority">Priority</label>
+                    <select id="workflow-priority">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                        <option value="urgent">Urgent</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeWorkflowModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Submit to Feishu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 CMDB Solutions. Integrated with Feishu Approval Workflows.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

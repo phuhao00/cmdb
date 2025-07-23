@@ -1,0 +1,20 @@
+{
+  "path": "c:\\Users\\admin\\cmdb",
+  "desc": "Refactored CMDB system with Golang backend and MongoDB database. Features comprehensive asset management with onboarding, decommissioning, status changes, maintenance requests, and integrated Feishu approval workflows. Includes real-time dashboard, advanced filtering, compliance reporting, and RESTful API endpoints.",
+  "id": "ea85a525866045c5a9106b25920e6b87",
+  "data": {
+    "spaceKey": "ea85a525866045c5a9106b25920e6b87",
+    "connections": {
+      "webIDE": "https://ea85a525866045c5a9106b25920e6b87.ap-singapore.cloudstudio.club",
+      "preview": "https://ea85a525866045c5a9106b25920e6b87--{port}.ap-singapore.cloudstudio.club",
+      "api": "https://ea85a525866045c5a9106b25920e6b87--api.ap-singapore.cloudstudio.club",
+      "pty": "https://ea85a525866045c5a9106b25920e6b87--pty.ap-singapore.cloudstudio.club"
+    }
+  },
+  "config": {
+    "api": "https://ea85a525866045c5a9106b25920e6b87--api.ap-singapore.cloudstudio.club",
+    "pty": "https://ea85a525866045c5a9106b25920e6b87--pty.ap-singapore.cloudstudio.club",
+    "region": "ap-shanghai",
+    "spaceKey": "ea85a525866045c5a9106b25920e6b87"
+  }
+}
