@@ -1,60 +1,95 @@
 # CMDB Backend API
 
-Golang backend service for the Configuration Management Database (CMDB) system.
+This is the backend API for the Configuration Management Database (CMDB) system, built with Go and the Gin framework.
 
 ## Features
 
-- RESTful API with Gin framework
-- MongoDB integration
-- Asset lifecycle management
-- Workflow management system
-- Feishu webhook integration
+- RESTful API for asset management
+- MongoDB integration for data storage
+- Workflow approval system with Feishu integration
 - Report generation endpoints
-- Docker containerization
 
 ## API Endpoints
 
 ### Assets
-- `GET /api/v1/assets` - List all assets
-- `POST /api/v1/assets` - Create new asset
+- `GET /api/v1/assets` - List assets
+- `POST /api/v1/assets` - Create asset
 - `PUT /api/v1/assets/:id` - Update asset
 - `DELETE /api/v1/assets/:id` - Decommission asset
-- `GET /api/v1/assets/stats` - Get asset statistics
+- `GET /api/v1/assets/stats` - Statistics
 
 ### Workflows
 - `GET /api/v1/workflows` - List workflows
 - `POST /api/v1/workflows` - Create workflow
-- `PUT /api/v1/workflows/:id/approve` - Approve workflow
-- `PUT /api/v1/workflows/:id/reject` - Reject workflow
+- `PUT /api/v1/workflows/:id/approve` - Approve
+- `PUT /api/v1/workflows/:id/reject` - Reject
 
 ### Reports
-- `GET /api/v1/reports/inventory` - Generate inventory report
-- `GET /api/v1/reports/lifecycle` - Generate lifecycle report
-- `GET /api/v1/reports/compliance` - Generate compliance report
-
-### Feishu Integration
-- `POST /api/v1/feishu/webhook` - Feishu webhook endpoint
-
-## Environment Variables
-
-- `MONGODB_URI` - MongoDB connection string (default: mongodb://localhost:27017)
-- `PORT` - Server port (default: 8080)
+- `GET /api/v1/reports/inventory` - Inventory report
+- `GET /api/v1/reports/lifecycle` - Lifecycle report
+- `GET /api/v1/reports/compliance` - Compliance report
 
 ## Development
 
-```bash
-# Install dependencies
-go mod tidy
+### Prerequisites
 
-# Run the server
-go run main.go
+- Go 1.21 or higher
+- MongoDB 7.0 or higher
+
+### Setup
+
+1. Install dependencies:
+   ```
+   go mod download
+   ```
+
+2. Set environment variables:
+   ```
+   export MONGODB_URI="mongodb://admin:password123@localhost:27017/cmdb?authSource=admin"
+   export PORT=8080
+   ```
+
+3. Run the application:
+   ```
+   go run main.go
+   ```
+
+### Docker Build
+
+```
+docker build -t cmdb-api .
 ```
 
-## Docker
+## Data Models
 
-```bash
-# Build image
-docker build -t cmdb-backend .
+### Asset
+```go
+type Asset struct {
+    ID          primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+    AssetID     string             `json:"assetId" bson:"assetId"`
+    Name        string             `json:"name" bson:"name"`
+    Type        string             `json:"type" bson:"type"`
+    Status      string             `json:"status" bson:"status"`
+    Location    string             `json:"location" bson:"location"`
+    Description string             `json:"description" bson:"description"`
+    CreatedAt   time.Time          `json:"createdAt" bson:"createdAt"`
+    UpdatedAt   time.Time          `json:"updatedAt" bson:"updatedAt"`
+}
+```
 
-# Run container
-docker run -p 8080:8080 -e MONGODB_URI=mongodb://localhost:27017 cmdb-backend
+### Workflow
+```go
+type Workflow struct {
+    ID          primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+    WorkflowID  string             `json:"workflowId" bson:"workflowId"`
+    Type        string             `json:"type" bson:"type"`
+    AssetID     string             `json:"assetId" bson:"assetId"`
+    AssetName   string             `json:"assetName" bson:"assetName"`
+    Requester   string             `json:"requester" bson:"requester"`
+    Priority    string             `json:"priority" bson:"priority"`
+    Status      string             `json:"status" bson:"status"`
+    Reason      string             `json:"reason" bson:"reason"`
+    FeishuID    string             `json:"feishuId" bson:"feishuId"`
+    CreatedAt   time.Time          `json:"createdAt" bson:"createdAt"`
+    UpdatedAt   time.Time          `json:"updatedAt" bson:"updatedAt"`
+}

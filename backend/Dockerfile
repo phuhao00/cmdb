@@ -1,33 +1,29 @@
-# Build stage
 FROM golang:1.21-alpine AS builder
 
 WORKDIR /app
 
-# Copy go mod and sum files
+# Copy go.mod and go.sum files
 COPY go.mod go.sum ./
 
 # Download dependencies
 RUN go mod download
 
-# Copy source code
+# Copy the source code
 COPY . .
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
+RUN CGO_ENABLED=0 GOOS=linux go build -o cmdb-api .
 
-# Final stage
-FROM alpine:latest
+# Use a minimal alpine image for the final stage
+FROM alpine:3.18
 
-RUN apk --no-cache add ca-certificates
+WORKDIR /app
 
-WORKDIR /root/
+# Copy the binary from the builder stage
+COPY --from=builder /app/cmdb-api .
 
-# Copy the binary from builder
-COPY --from=builder /app/main .
-
-# Copy static files from frontend directory
-COPY --from=builder /app/frontend ./frontend
-
+# Expose the port
 EXPOSE 8080
 
-CMD ["./main"]
+# Run the application
+CMD ["./cmdb-api"]

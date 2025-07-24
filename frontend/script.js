@@ -1,5 +1,5 @@
 // API Configuration
-const API_BASE_URL = '/api/v1';
+const API_BASE_URL = window.location.protocol + '//' + window.location.hostname + (window.location.port ? ':8080' : '') + '/api/v1';
 
 // Data storage
 let assets = [];
@@ -11,7 +11,13 @@ document.addEventListener('DOMContentLoaded', function() {
     setupNavigation();
     loadAssetsFromAPI();
     loadWorkflowsFromAPI();
-    loadDashboardStats();
+    
+    // Initialize dashboard charts if Chart.js is loaded
+    if (typeof Chart !== 'undefined' && document.getElementById('asset-status-chart')) {
+        initDashboardCharts();
+    } else {
+        loadDashboardStats(); // Fallback to basic stats if charts aren't available
+    }
 });
 
 // Navigation
@@ -92,6 +98,7 @@ function createAssetRow(asset) {
     const row = document.createElement('tr');
     const updatedAt = asset.updatedAt ? new Date(asset.updatedAt).toLocaleString() : 'N/A';
     const assetId = asset.assetId || asset.id;
+    const objectId = asset.id || asset._id;
     
     row.innerHTML = `
         <td>${assetId}</td>
@@ -101,13 +108,16 @@ function createAssetRow(asset) {
         <td>${asset.location}</td>
         <td>${updatedAt}</td>
         <td>
-            <button class="action-btn edit" onclick="editAsset('${asset.id}')">
+            <button class="action-btn view" onclick="openAssetDetailModal('${objectId}')">
+                <i class="fas fa-eye"></i>
+            </button>
+            <button class="action-btn edit" onclick="editAsset('${objectId}')">
                 <i class="fas fa-edit"></i>
             </button>
-            <button class="action-btn status" onclick="changeAssetStatus('${asset.id}')">
+            <button class="action-btn status" onclick="changeAssetStatus('${objectId}')">
                 <i class="fas fa-power-off"></i>
             </button>
-            <button class="action-btn delete" onclick="deleteAsset('${asset.id}')">
+            <button class="action-btn delete" onclick="deleteAsset('${objectId}')">
                 <i class="fas fa-trash"></i>
             </button>
         </td>
@@ -138,6 +148,280 @@ async function filterAssets() {
     }
 }
 
+// Bulk Asset Import Functions
+function openBulkAssetModal() {
+    document.getElementById('bulk-asset-modal').style.display = 'block';
+    document.getElementById('bulk-asset-data').value = '';
+}
+
+function closeBulkAssetModal() {
+    document.getElementById('bulk-asset-modal').style.display = 'none';
+}
+
+function showJsonTemplate() {
+    const template = [
+        {
+            "name": "Example Server 1",
+            "type": "server",
+            "location": "Data Center A - Rack 5",
+            "description": "Application server for production"
+        },
+        {
+            "name": "Example Network Switch",
+            "type": "network",
+            "location": "Data Center B - Network Room",
+            "description": "Core network switch"
+        }
+    ];
+    
+    document.getElementById('bulk-asset-data').value = JSON.stringify(template, null, 2);
+}
+
+function showCsvTemplate() {
+    const template = 'name,type,location,description\n' +
+                    'Example Server 1,server,Data Center A - Rack 5,Application server for production\n' +
+                    'Example Network Switch,network,Data Center B - Network Room,Core network switch';
+    
+    document.getElementById('bulk-asset-data').value = template;
+}
+
+async function processBulkImport() {
+    const format = document.getElementById('bulk-import-format').value;
+    const data = document.getElementById('bulk-asset-data').value.trim();
+    
+    if (!data) {
+        showNotification('Please enter data to import', 'error');
+        return;
+    }
+    
+    try {
+        let assetsToImport = [];
+        
+        if (format === 'json') {
+            // Parse JSON data
+            assetsToImport = JSON.parse(data);
+            if (!Array.isArray(assetsToImport)) {
+                assetsToImport = [assetsToImport]; // Convert single object to array
+            }
+        } else if (format === 'csv') {
+            // Parse CSV data
+            const lines = data.split('\n');
+            const headers = lines[0].split(',');
+            
+            for (let i = 1; i < lines.length; i++) {
+                if (!lines[i].trim()) continue;
+                
+                const values = lines[i].split(',');
+                const asset = {};
+                
+                headers.forEach((header, index) => {
+                    if (values[index]) {
+                        asset[header.trim()] = values[index].trim();
+                    }
+                });
+                
+                assetsToImport.push(asset);
+            }
+        }
+        
+        if (assetsToImport.length === 0) {
+            showNotification('No valid assets found to import', 'error');
+            return;
+        }
+        
+        // Validate required fields
+        const invalidAssets = assetsToImport.filter(asset => 
+            !asset.name || !asset.type || !asset.location
+        );
+        
+        if (invalidAssets.length > 0) {
+            showNotification(`${invalidAssets.length} assets are missing required fields (name, type, location)`, 'error');
+            return;
+        }
+        
+        // Submit to API
+        const response = await fetch(`${API_BASE_URL}/assets/bulk`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(assetsToImport)
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            showNotification(`Successfully imported ${result.assetsCreated} assets`, 'success');
+            closeBulkAssetModal();
+            loadAssetsFromAPI();
+            loadWorkflowsFromAPI();
+            loadDashboardStats();
+        } else {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to import assets');
+        }
+    } catch (error) {
+        console.error('Error processing bulk import:', error);
+        showNotification(`Import failed: ${error.message}`, 'error');
+    }
+}
+
+function exportAssets() {
+    showNotification('Preparing asset export...', 'info');
+    
+    try {
+        // Convert assets to CSV
+        const headers = ['Asset ID', 'Name', 'Type', 'Status', 'Location', 'Description', 'Created At', 'Updated At'];
+        let csvContent = headers.join(',') + '\n';
+        
+        assets.forEach(asset => {
+            const createdAt = asset.createdAt ? new Date(asset.createdAt).toISOString() : '';
+            const updatedAt = asset.updatedAt ? new Date(asset.updatedAt).toISOString() : '';
+            const assetId = asset.assetId || asset.id;
+            
+            const row = [
+                assetId,
+                asset.name,
+                asset.type,
+                asset.status,
+                asset.location,
+                asset.description || '',
+                createdAt,
+                updatedAt
+            ].map(value => `"${String(value).replace(/"/g, '""')}"`).join(',');
+            
+            csvContent += row + '\n';
+        });
+        
+        // Create download link
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `cmdb-assets-${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        showNotification('Asset export completed', 'success');
+    } catch (error) {
+        console.error('Error exporting assets:', error);
+        showNotification('Failed to export assets', 'error');
+    }
+}
+
+// Asset Detail View Functions
+function openAssetDetailModal(assetId) {
+    const asset = assets.find(a => a.id === assetId || a._id === assetId);
+    if (!asset) return;
+    
+    // Populate asset details
+    document.getElementById('asset-detail-title').textContent = `Asset: ${asset.name}`;
+    document.getElementById('detail-asset-id').textContent = asset.assetId || asset.id;
+    document.getElementById('detail-name').textContent = asset.name;
+    document.getElementById('detail-type').textContent = capitalizeFirst(asset.type);
+    
+    const statusElement = document.getElementById('detail-status');
+    statusElement.textContent = capitalizeFirst(asset.status);
+    statusElement.className = `detail-value status-${asset.status}`;
+    
+    document.getElementById('detail-location').textContent = asset.location;
+    document.getElementById('detail-description').textContent = asset.description || 'No description provided';
+    
+    const createdDate = asset.createdAt ? new Date(asset.createdAt).toLocaleString() : 'N/A';
+    const updatedDate = asset.updatedAt ? new Date(asset.updatedAt).toLocaleString() : 'N/A';
+    
+    document.getElementById('detail-created').textContent = createdDate;
+    document.getElementById('detail-updated').textContent = updatedDate;
+    
+    // Set up action buttons
+    const statusBtn = document.getElementById('detail-status-btn');
+    if (asset.status === 'online') {
+        statusBtn.innerHTML = '<i class="fas fa-power-off"></i> Set Offline';
+    } else if (asset.status === 'offline') {
+        statusBtn.innerHTML = '<i class="fas fa-power-off"></i> Set Online';
+    } else {
+        statusBtn.innerHTML = '<i class="fas fa-power-off"></i> Change Status';
+    }
+    
+    statusBtn.onclick = () => changeAssetStatus(assetId);
+    
+    // Load asset workflow history
+    loadAssetHistory(asset.assetId || asset.id);
+    
+    // Store current asset ID for action buttons
+    document.getElementById('asset-detail-modal').dataset.assetId = assetId;
+    
+    // Show modal
+    document.getElementById('asset-detail-modal').style.display = 'block';
+}
+
+function closeAssetDetailModal() {
+    document.getElementById('asset-detail-modal').style.display = 'none';
+}
+
+async function loadAssetHistory(assetId) {
+    const historyList = document.getElementById('asset-history-list');
+    historyList.innerHTML = '<div class="loading-spinner"><div class="spinner"></div> Loading history...</div>';
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/workflows/history/${assetId}`);
+        if (response.ok) {
+            const workflows = await response.json();
+            
+            if (workflows.length === 0) {
+                historyList.innerHTML = '<p>No workflow history found for this asset</p>';
+                return;
+            }
+            
+            historyList.innerHTML = '';
+            workflows.forEach(workflow => {
+                const item = document.createElement('div');
+                item.className = `history-item status-${workflow.status}`;
+                
+                const date = new Date(workflow.createdAt).toLocaleString();
+                
+                item.innerHTML = `
+                    <div class="history-header">
+                        <span class="history-type">${workflow.type}</span>
+                        <span class="history-date">${date}</span>
+                    </div>
+                    <div class="history-details">
+                        <p><strong>Status:</strong> ${capitalizeFirst(workflow.status)}</p>
+                        <p><strong>Requester:</strong> ${workflow.requester}</p>
+                        <p><strong>Reason:</strong> ${workflow.reason}</p>
+                    </div>
+                `;
+                
+                historyList.appendChild(item);
+            });
+        } else {
+            throw new Error('Failed to load asset history');
+        }
+    } catch (error) {
+        console.error('Error loading asset history:', error);
+        historyList.innerHTML = '<p>Error loading workflow history</p>';
+    }
+}
+
+function editAssetFromDetail() {
+    const assetId = document.getElementById('asset-detail-modal').dataset.assetId;
+    closeAssetDetailModal();
+    openAssetModal(assetId);
+}
+
+function requestMaintenanceFromDetail() {
+    const assetId = document.getElementById('asset-detail-modal').dataset.assetId;
+    closeAssetDetailModal();
+    startWorkflowForAsset('maintenance', assetId, 'Maintenance requested from asset details');
+}
+
+function decommissionFromDetail() {
+    const assetId = document.getElementById('asset-detail-modal').dataset.assetId;
+    closeAssetDetailModal();
+    deleteAsset(assetId);
+}
+
 // Asset Modal Functions
 function openAssetModal(assetId = null) {
     const modal = document.getElementById('asset-modal');
@@ -145,7 +429,7 @@ function openAssetModal(assetId = null) {
     const form = document.getElementById('asset-form');
 
     if (assetId) {
-        const asset = assets.find(a => a.id === assetId);
+        const asset = assets.find(a => a.id === assetId || a._id === assetId);
         if (asset) {
             title.textContent = 'Edit Asset';
             document.getElementById('asset-name').value = asset.name;
@@ -224,11 +508,14 @@ async function submitAsset(event) {
 
 // Asset Actions
 function editAsset(assetId) {
-    openAssetModal(assetId);
+    const asset = assets.find(a => a.id === assetId || a._id === assetId);
+    if (asset) {
+        openAssetModal(assetId);
+    }
 }
 
 async function changeAssetStatus(assetId) {
-    const asset = assets.find(a => a.id === assetId);
+    const asset = assets.find(a => a.id === assetId || a._id === assetId);
     if (asset) {
         const newStatus = asset.status === 'online' ? 'offline' : 'online';
         await startWorkflowForAsset('status-change', assetId, `Change status from ${asset.status} to ${newStatus}`);
@@ -246,6 +533,7 @@ async function deleteAsset(assetId) {
                 const result = await response.json();
                 showNotification(result.message, 'success');
                 loadWorkflowsFromAPI();
+                loadAssetsFromAPI(); // Reload assets to reflect changes
                 loadDashboardStats();
             } else {
                 throw new Error('Failed to start decommission workflow');
@@ -278,8 +566,9 @@ function startWorkflow(workflowType) {
     assetSelect.innerHTML = '<option value="">Select Asset</option>';
     assets.forEach(asset => {
         const option = document.createElement('option');
-        option.value = asset.assetId || asset.id;
-        option.textContent = `${asset.assetId || asset.id} - ${asset.name}`;
+        const assetId = asset.assetId || asset.id;
+        option.value = assetId;
+        option.textContent = `${assetId} - ${asset.name}`;
         assetSelect.appendChild(option);
     });
 
@@ -287,7 +576,7 @@ function startWorkflow(workflowType) {
 }
 
 async function startWorkflowForAsset(workflowType, assetId, reason) {
-    const asset = assets.find(a => a.id === assetId);
+    const asset = assets.find(a => a.id === assetId || a._id === assetId);
     if (!asset) return;
 
     const workflowData = {
@@ -337,7 +626,7 @@ async function submitWorkflow(event) {
         return;
     }
 
-    const asset = assets.find(a => (a.assetId || a.id) === assetId);
+    const asset = assets.find(a => (a.assetId === assetId) || (a.id === assetId) || (a._id === assetId));
     if (!asset) {
         showNotification('Asset not found', 'error');
         return;
@@ -417,6 +706,7 @@ async function approveWorkflow(approvalId) {
 
         if (response.ok) {
             showNotification('Workflow approved and executed', 'success');
+            // Reload all data to reflect changes
             loadWorkflowsFromAPI();
             loadAssetsFromAPI();
             loadDashboardStats();
@@ -437,7 +727,9 @@ async function rejectWorkflow(approvalId) {
 
         if (response.ok) {
             showNotification('Workflow rejected', 'warning');
+            // Reload workflows and stats
             loadWorkflowsFromAPI();
+            loadAssetsFromAPI(); // Also reload assets as status might have changed
             loadDashboardStats();
         } else {
             throw new Error('Failed to reject workflow');

@@ -1,199 +1,118 @@
 # CMDB - Configuration Management Database
 
-A comprehensive Configuration Management Database (CMDB) system built with Golang backend, MongoDB database, and modern web frontend. Features integrated Feishu approval workflows for asset lifecycle management.
+A modern Configuration Management Database (CMDB) system with Feishu approval workflow integration.
 
 ## Features
 
-### Asset Management
-- 📥 **Asset Onboarding** - Add new assets with approval workflow
-- 📤 **Asset Decommissioning** - Remove assets from inventory
-- 🔄 **Status Management** - Online/Offline/Maintenance status changes
-- 🏪 **Inventory Management** - Complete asset tracking and cataloging
-- 🔧 **Maintenance Requests** - Schedule and track maintenance
+- **Asset Management**: Track IT assets with detailed information
+- **Workflow Approvals**: Integrated with Feishu for approval workflows
+- **Real-time Dashboard**: Monitor asset status and pending approvals
+- **Reporting**: Generate inventory, lifecycle, and compliance reports
 
-### Feishu Integration
-- 📋 **Approval Workflows** - All asset operations require approval
-- 🔔 **Workflow Notifications** - Real-time status updates
-- 👥 **Multi-level Approvals** - Support for complex approval chains
-- 📊 **Workflow Tracking** - Monitor approval status and history
+## Tech Stack
 
-### Dashboard & Analytics
-- 📈 **Real-time Statistics** - Asset counts, status distribution
-- 🔍 **Advanced Filtering** - Filter by status, type, location
-- 📋 **Asset Table** - Comprehensive asset listing with actions
-- 📊 **Compliance Reporting** - Generate audit and compliance reports
-
-## Technology Stack
-
-- **Backend**: Golang with Gin framework
+- **Backend**: Go with Gin framework
 - **Database**: MongoDB
-- **Frontend**: HTML5, CSS3, JavaScript (ES6+)
-- **Integration**: Feishu API for approval workflows
-- **Deployment**: Docker & Docker Compose
+- **Frontend**: HTML, CSS, JavaScript
+- **Containerization**: Docker & Docker Compose
 
-## Quick Start
+## Project Structure
 
-### Prerequisites
-- Docker and Docker Compose
-- Go 1.21+ (for local development)
-- MongoDB (if running locally)
-
-### Using Docker Compose (Recommended)
-
-1. Clone the repository:
-```bash
-git clone <repository-url>
-cd cmdb
+```
+cmdb/
+├── backend/                    # Golang Backend API
+│   ├── main.go                # Complete REST API with MongoDB
+│   ├── go.mod                 # Go dependencies
+│   ├── Dockerfile             # Backend containerization
+│   ├── init-mongo.js          # Database initialization
+│   └── README.md              # Backend documentation
+├── frontend/                   # Web Frontend
+│   ├── index.html             # Complete CMDB interface
+│   ├── style.css              # Responsive design
+│   ├── script.js              # API integration
+│   └── README.md              # Frontend documentation
+├── docker-compose.yml          # Multi-container setup
+├── start.bat                   # Windows startup script
+├── start.sh                    # Linux/Mac startup script
+└── README.md                   # This documentation
 ```
 
-2. Start the application:
+## Getting Started
+
+### Option 1: Using Docker Compose (Recommended)
+
 ```bash
 docker-compose up -d
 ```
 
-3. Access the application:
-- Web Interface: http://localhost:8080
-- MongoDB: localhost:27017
+This will start:
+- MongoDB database on port 27017
+- Backend API on port 8080
+- Frontend on port 80 (using Nginx)
 
-### Local Development
+### Option 2: Manual Setup
 
-1. Install dependencies:
+#### Start MongoDB
 ```bash
-go mod download
+docker run -d --name cmdb-mongodb -p 27017:27017 \
+  -e MONGO_INITDB_ROOT_USERNAME=admin \
+  -e MONGO_INITDB_ROOT_PASSWORD=password123 \
+  -v $(pwd)/backend/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro \
+  mongo:7.0
 ```
 
-2. Start MongoDB:
+#### Start Backend API
 ```bash
-# Using Docker
-docker run -d -p 27017:27017 --name mongodb mongo:7.0
-
-# Or install MongoDB locally
-```
-
-3. Set environment variables:
-```bash
-export MONGODB_URI="mongodb://localhost:27017"
-export PORT="8080"
-```
-
-4. Run the application:
-```bash
+cd backend
+export MONGODB_URI="mongodb://admin:password123@localhost:27017/cmdb?authSource=admin"
 go run main.go
 ```
+
+#### Serve Frontend
+```bash
+# Using Python's built-in HTTP server
+cd frontend
+python -m http.server 80
+
+# Or using Node.js http-server
+cd frontend
+npx http-server -p 80
+```
+
+## Access Points
+
+- **Frontend**: http://localhost
+- **Backend API**: http://localhost:8080/api/v1/*
+- **MongoDB**: localhost:27017
 
 ## API Endpoints
 
 ### Assets
-- `GET /api/v1/assets` - List all assets
-- `POST /api/v1/assets` - Create new asset
+- `GET /api/v1/assets` - List assets
+- `POST /api/v1/assets` - Create asset
 - `PUT /api/v1/assets/:id` - Update asset
 - `DELETE /api/v1/assets/:id` - Decommission asset
-- `GET /api/v1/assets/stats` - Get asset statistics
+- `GET /api/v1/assets/stats` - Statistics
 
 ### Workflows
 - `GET /api/v1/workflows` - List workflows
 - `POST /api/v1/workflows` - Create workflow
-- `PUT /api/v1/workflows/:id/approve` - Approve workflow
-- `PUT /api/v1/workflows/:id/reject` - Reject workflow
+- `PUT /api/v1/workflows/:id/approve` - Approve
+- `PUT /api/v1/workflows/:id/reject` - Reject
 
 ### Reports
-- `GET /api/v1/reports/inventory` - Generate inventory report
-- `GET /api/v1/reports/lifecycle` - Generate lifecycle report
-- `GET /api/v1/reports/compliance` - Generate compliance report
+- `GET /api/v1/reports/inventory` - Inventory report
+- `GET /api/v1/reports/lifecycle` - Lifecycle report
+- `GET /api/v1/reports/compliance` - Compliance report
 
-### Feishu Integration
-- `POST /api/v1/feishu/webhook` - Feishu webhook endpoint
+## Feishu Integration
 
-## Configuration
+The system is designed to integrate with Feishu for approval workflows. In the current implementation, this integration is simulated. To connect to a real Feishu instance, you would need to:
 
-### Environment Variables
-- `MONGODB_URI` - MongoDB connection string (default: mongodb://localhost:27017)
-- `PORT` - Server port (default: 8080)
-
-### MongoDB Collections
-- `assets` - Asset information
-- `workflows` - Approval workflows
-
-## Asset Lifecycle
-
-1. **Asset Creation** → Triggers onboarding workflow
-2. **Feishu Approval** → Automated approval process
-3. **Asset Activation** → Status changes to online
-4. **Maintenance** → Status changes with approval
-5. **Decommission** → Removal workflow with approval
-
-## Workflow Types
-
-- **Asset Onboarding** - New asset registration
-- **Asset Decommission** - Asset removal
-- **Status Change** - Online/Offline transitions
-- **Maintenance Request** - Scheduled maintenance
-
-## Development
-
-### Project Structure
-```
-cmdb/
-├── backend/             # Golang backend API
-│   ├── main.go         # Main application entry point
-│   ├── go.mod          # Go module dependencies
-│   ├── Dockerfile      # Backend Docker configuration
-│   ├── init-mongo.js   # MongoDB initialization
-│   └── README.md       # Backend documentation
-├── frontend/           # Web frontend
-│   ├── index.html      # Main HTML page
-│   ├── style.css       # Stylesheet
-│   ├── script.js       # JavaScript functionality
-│   └── README.md       # Frontend documentation
-├── docker-compose.yml  # Multi-container setup
-└── README.md           # This file
-```
-
-### Adding New Features
-
-1. **Backend**: Add new routes in `main.go`
-2. **Frontend**: Update JavaScript functions in `script.js`
-3. **Database**: Modify MongoDB collections as needed
-4. **Feishu**: Extend webhook handling for new workflow types
-
-## Deployment
-
-### Production Deployment
-
-1. Build and deploy using Docker:
-```bash
-docker-compose -f docker-compose.yml up -d
-```
-
-2. Configure environment variables for production
-3. Set up MongoDB with proper authentication
-4. Configure Feishu webhook URLs
-
-### Scaling
-
-- Use MongoDB replica sets for high availability
-- Deploy multiple API instances behind a load balancer
-- Implement Redis for session management if needed
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+1. Register an application in Feishu developer console
+2. Configure approval workflows in Feishu
+3. Update the `submitToFeishu` function in `backend/main.go` with actual API calls
 
 ## License
 
-This project is licensed under the GPL v3 License - see the LICENSE file for details.
-
-## Support
-
-For support and questions:
-- Create an issue in the repository
-- Contact the development team
-- Check the documentation
-
----
-
-**CMDB System** - Streamlining IT infrastructure management with comprehensive asset lifecycle automation.
+MIT

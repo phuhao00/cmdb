@@ -1,92 +1,55 @@
 # CMDB Frontend
 
-Modern web interface for the Configuration Management Database (CMDB) system.
+This is the frontend web interface for the Configuration Management Database (CMDB) system.
 
 ## Features
 
-- **Responsive Design** - Works on desktop, tablet, and mobile devices
-- **Real-time Dashboard** - Live statistics and asset monitoring
-- **Asset Management** - Create, edit, delete, and manage IT assets
-- **Workflow Interface** - Feishu integration for approval workflows
-- **Advanced Filtering** - Search and filter assets by multiple criteria
-- **Report Generation** - Export inventory, lifecycle, and compliance reports
-- **Interactive UI** - Modern design with smooth animations
+- Modern responsive web interface
+- Real-time dashboard with asset statistics
+- Asset management with filtering and search
+- Workflow approval interface
+- Report generation UI
 
-## Technology Stack
+## Structure
 
-- **HTML5** - Semantic markup and modern web standards
-- **CSS3** - Flexbox, Grid, animations, and responsive design
-- **JavaScript (ES6+)** - Async/await, fetch API, modern syntax
-- **Font Awesome** - Icon library for UI elements
-
-## File Structure
-
-```
-frontend/
-├── index.html    # Main HTML page
-├── style.css     # Stylesheet with responsive design
-├── script.js     # JavaScript functionality and API integration
-└── README.md     # This file
-```
-
-## Features Overview
-
-### Dashboard
-- Asset count statistics
-- Status distribution charts
-- Pending approval notifications
-- Quick action buttons
-
-### Asset Management
-- Asset table with sorting and filtering
-- Add/Edit asset modal forms
-- Status change workflows
-- Bulk operations support
-
-### Workflow Management
-- Feishu approval integration
-- Workflow status tracking
-- Priority management
-- Approval/rejection actions
-
-### Reports
-- Inventory reports (CSV export)
-- Lifecycle analysis
-- Compliance reporting
-- Custom date ranges
-
-## API Integration
-
-The frontend communicates with the backend API using:
-- RESTful endpoints
-- JSON data format
-- Async/await for API calls
-- Error handling and notifications
+- `index.html` - Main HTML structure
+- `style.css` - CSS styles for responsive design
+- `script.js` - JavaScript for API integration and UI interactions
 
 ## Development
 
-To run the frontend locally:
+The frontend is built with vanilla HTML, CSS, and JavaScript without any frameworks. It communicates with the backend API using fetch requests.
 
-```bash
-# Using Python
-python -m http.server 8080
+### API Integration
 
-# Using Node.js
-npx serve . -p 8080
+The frontend connects to the backend API at `/api/v1/` endpoints. The main API functions are:
 
-# Using PHP
-php -S localhost:8080
-```
+- Asset management (CRUD operations)
+- Workflow approvals
+- Report generation
+- Dashboard statistics
 
-## Browser Support
+### UI Components
 
-- Chrome 60+
-- Firefox 55+
-- Safari 12+
-- Edge 79+
+- Dashboard with statistics cards
+- Asset management table with filters
+- Workflow approval cards
+- Report generation interface
+- Modal forms for asset and workflow creation
 
-## Responsive Breakpoints
+## Usage
 
-- Mobile: < 768px
-- Tablet: 768px - 1024px
-- Desktop: > 1024px
+1. Start the backend server
+2. Access the web interface at http://localhost:8080
+3. Use the navigation menu to access different sections
+4. Add, edit, and manage assets through the interface
+5. Process workflow approvals
+6. Generate reports
+
+## Customization
+
+To customize the UI:
+
+- Edit `style.css` to change colors, fonts, and layout
+- Modify `index.html` to adjust the structure
+- Update `script.js` to change behavior and API interactions

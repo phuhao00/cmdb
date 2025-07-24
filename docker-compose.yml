@@ -17,6 +17,19 @@ services:
     networks:
       - cmdb-network
 
+  consul:
+    image: consul:1.15
+    container_name: cmdb-consul
+    restart: unless-stopped
+    ports:
+      - "8500:8500"  # UI and API
+      - "8600:8600/udp"  # DNS
+    command: "agent -server -ui -node=server-1 -bootstrap-expect=1 -client=0.0.0.0"
+    volumes:
+      - consul_data:/consul/data
+    networks:
+      - cmdb-network
+
   cmdb-api:
     build: ./backend
     container_name: cmdb-api
@@ -25,16 +38,34 @@ services:
       - "8080:8080"
     environment:
       MONGODB_URI: mongodb://admin:password123@mongodb:27017/cmdb?authSource=admin
+      CONSUL_ADDRESS: consul:8500
       PORT: 8080
+      SERVICE_ADDRESS: cmdb-api
     depends_on:
       - mongodb
-    volumes:
-      - ./frontend:/app/frontend
+      - consul
+    networks:
+      - cmdb-network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: cmdb-frontend
+    restart: unless-stopped
+    ports:
+      - "80:8080"
+    environment:
+      BACKEND_HOST: cmdb-api
+      BACKEND_PORT: 8080
+    depends_on:
+      - cmdb-api
     networks:
       - cmdb-network
 
 volumes:
   mongodb_data:
+  consul_data:
 
 networks:
   cmdb-network:

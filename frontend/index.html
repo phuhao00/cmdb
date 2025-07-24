@@ -6,6 +6,7 @@
     <title>CMDB - Configuration Management Database</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <header>
@@ -26,35 +27,74 @@
         <!-- Dashboard Section -->
         <section id="dashboard" class="dashboard">
             <div class="container">
-                <h2>CMDB Dashboard</h2>
+                <div class="section-header">
+                    <h2>CMDB Dashboard</h2>
+                    <button class="btn btn-primary" onclick="refreshDashboard()">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+                
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-icon"><i class="fas fa-server"></i></div>
                         <div class="stat-info">
-                            <h3 id="total-assets">1,247</h3>
+                            <h3 id="total-assets">0</h3>
                             <p>Total Assets</p>
                         </div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon online"><i class="fas fa-check-circle"></i></div>
                         <div class="stat-info">
-                            <h3 id="online-assets">1,156</h3>
+                            <h3 id="online-assets">0</h3>
                             <p>Online Assets</p>
                         </div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon offline"><i class="fas fa-times-circle"></i></div>
                         <div class="stat-info">
-                            <h3 id="offline-assets">91</h3>
+                            <h3 id="offline-assets">0</h3>
                             <p>Offline Assets</p>
                         </div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon pending"><i class="fas fa-clock"></i></div>
                         <div class="stat-info">
-                            <h3 id="pending-approvals">23</h3>
+                            <h3 id="pending-approvals">0</h3>
                             <p>Pending Approvals</p>
                         </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon maintenance"><i class="fas fa-tools"></i></div>
+                        <div class="stat-info">
+                            <h3 id="maintenance-assets">0</h3>
+                            <p>In Maintenance</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon decommissioned"><i class="fas fa-archive"></i></div>
+                        <div class="stat-info">
+                            <h3 id="decommissioned-assets">0</h3>
+                            <p>Decommissioned</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="dashboard-charts">
+                    <div class="chart-container">
+                        <canvas id="asset-status-chart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="workflow-status-chart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="type-distribution-chart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="recent-activity">
+                    <h3>Recent Workflows</h3>
+                    <div id="recent-workflows" class="recent-workflows">
+                        <!-- Recent workflows will be populated by JavaScript -->
                     </div>
                 </div>
             </div>
@@ -65,9 +105,17 @@
             <div class="container">
                 <div class="section-header">
                     <h2>Asset Management</h2>
-                    <button class="btn btn-primary" onclick="openAssetModal()">
-                        <i class="fas fa-plus"></i> Add Asset
-                    </button>
+                    <div class="button-group">
+                        <button class="btn btn-primary" onclick="openAssetModal()">
+                            <i class="fas fa-plus"></i> Add Asset
+                        </button>
+                        <button class="btn btn-secondary" onclick="openBulkAssetModal()">
+                            <i class="fas fa-file-import"></i> Bulk Import
+                        </button>
+                        <button class="btn btn-outline" onclick="exportAssets()">
+                            <i class="fas fa-file-export"></i> Export
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Asset Filters -->
@@ -211,6 +259,39 @@
         </div>
     </div>
 
+    <!-- Bulk Asset Import Modal -->
+    <div id="bulk-asset-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Bulk Asset Import</h3>
+                <span class="close" onclick="closeBulkAssetModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="bulk-import-format">Import Format</label>
+                    <select id="bulk-import-format">
+                        <option value="json">JSON</option>
+                        <option value="csv">CSV</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="bulk-asset-data">Paste your data below</label>
+                    <textarea id="bulk-asset-data" rows="10" placeholder="Paste JSON or CSV data here..."></textarea>
+                </div>
+                <div class="form-group">
+                    <div class="template-links">
+                        <a href="#" onclick="showJsonTemplate()">View JSON Template</a> | 
+                        <a href="#" onclick="showCsvTemplate()">View CSV Template</a>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeBulkAssetModal()">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="processBulkImport()">Import Assets</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Workflow Modal -->
     <div id="workflow-modal" class="modal">
         <div class="modal-content">
@@ -246,6 +327,80 @@
         </div>
     </div>
 
+    <!-- Asset Detail Modal -->
+    <div id="asset-detail-modal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3 id="asset-detail-title">Asset Details</h3>
+                <span class="close" onclick="closeAssetDetailModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="asset-detail-container">
+                    <div class="asset-detail-info">
+                        <div class="detail-section">
+                            <h4>Basic Information</h4>
+                            <div class="detail-grid">
+                                <div class="detail-item">
+                                    <span class="detail-label">Asset ID:</span>
+                                    <span id="detail-asset-id" class="detail-value"></span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Name:</span>
+                                    <span id="detail-name" class="detail-value"></span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Type:</span>
+                                    <span id="detail-type" class="detail-value"></span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Status:</span>
+                                    <span id="detail-status" class="detail-value"></span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Location:</span>
+                                    <span id="detail-location" class="detail-value"></span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Created:</span>
+                                    <span id="detail-created" class="detail-value"></span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Last Updated:</span>
+                                    <span id="detail-updated" class="detail-value"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="detail-section">
+                            <h4>Description</h4>
+                            <p id="detail-description" class="detail-description"></p>
+                        </div>
+                    </div>
+                    <div class="asset-detail-actions">
+                        <button class="btn btn-primary" onclick="editAssetFromDetail()">
+                            <i class="fas fa-edit"></i> Edit Asset
+                        </button>
+                        <button class="btn btn-secondary" id="detail-status-btn">
+                            <i class="fas fa-power-off"></i> Change Status
+                        </button>
+                        <button class="btn btn-secondary" onclick="requestMaintenanceFromDetail()">
+                            <i class="fas fa-tools"></i> Request Maintenance
+                        </button>
+                        <button class="btn btn-danger" onclick="decommissionFromDetail()">
+                            <i class="fas fa-trash"></i> Decommission
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="asset-history">
+                    <h4>Workflow History</h4>
+                    <div id="asset-history-list" class="asset-history-list">
+                        <!-- Workflow history will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <footer>
         <div class="container">
             <p>&copy; 2024 CMDB Solutions. Integrated with Feishu Approval Workflows.</p>
@@ -253,5 +408,6 @@
     </footer>
 
     <script src="script.js"></script>
+    <script src="dashboard.js"></script>
 </body>
 </html>

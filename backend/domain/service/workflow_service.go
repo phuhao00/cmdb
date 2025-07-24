@@ -1,0 +1,211 @@
+package service
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"time"
+
+	"github.com/cmdb/backend/domain/model"
+	"github.com/cmdb/backend/domain/repository"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
+
+// WorkflowService provides domain logic for workflows
+type WorkflowService struct {
+	workflowRepo repository.WorkflowRepository
+	assetRepo    repository.AssetRepository
+}
+
+// NewWorkflowService creates a new workflow service
+func NewWorkflowService(workflowRepo repository.WorkflowRepository, assetRepo repository.AssetRepository) *WorkflowService {
+	return &WorkflowService{
+		workflowRepo: workflowRepo,
+		assetRepo:    assetRepo,
+	}
+}
+
+// CreateWorkflow creates a new workflow
+func (s *WorkflowService) CreateWorkflow(ctx context.Context, workflowType string, assetID string, requester string, priority string, reason string) (*model.Workflow, error) {
+	// Find asset
+	asset, err := s.assetRepo.FindByAssetID(ctx, assetID)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Create workflow
+	workflow := model.NewWorkflow(
+		model.WorkflowType(workflowType),
+		asset.AssetID,
+		asset.Name,
+		requester,
+		model.WorkflowPriority(priority),
+		reason,
+	)
+	
+	// Generate workflow ID
+	workflowID, err := s.workflowRepo.GenerateWorkflowID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	workflow.WorkflowID = workflowID
+	
+	// Save workflow
+	if err := s.workflowRepo.Save(ctx, workflow); err != nil {
+		return nil, err
+	}
+	
+	return workflow, nil
+}
+
+// ApproveWorkflow approves a workflow and executes the associated action
+func (s *WorkflowService) ApproveWorkflow(ctx context.Context, id primitive.ObjectID) error {
+	// Find workflow
+	workflow, err := s.workflowRepo.FindByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	
+	// Check if workflow is already processed
+	if !workflow.IsPending() {
+		return errors.New("workflow is already processed")
+	}
+	
+	// Approve workflow
+	workflow.Approve()
+	
+	// Save workflow
+	if err := s.workflowRepo.Save(ctx, workflow); err != nil {
+		return err
+	}
+	
+	// Execute approved action
+	return s.executeApprovedAction(ctx, workflow)
+}
+
+// RejectWorkflow rejects a workflow
+func (s *WorkflowService) RejectWorkflow(ctx context.Context, id primitive.ObjectID) error {
+	// Find workflow
+	workflow, err := s.workflowRepo.FindByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	
+	// Check if workflow is already processed
+	if !workflow.IsPending() {
+		return errors.New("workflow is already processed")
+	}
+	
+	// Reject workflow
+	workflow.Reject()
+	
+	// Save workflow
+	if err := s.workflowRepo.Save(ctx, workflow); err != nil {
+		return err
+	}
+	
+	return nil
+}
+
+// HandleFeishuWebhook handles a webhook from Feishu
+func (s *WorkflowService) HandleFeishuWebhook(ctx context.Context, feishuID string, status string) error {
+	// Find workflow
+	workflow, err := s.workflowRepo.FindByFeishuID(ctx, feishuID)
+	if err != nil {
+		return err
+	}
+	
+	// Check if workflow is already processed
+	if !workflow.IsPending() {
+		return errors.New("workflow is already processed")
+	}
+	
+	// Update workflow status
+	if status == "approved" {
+		workflow.Approve()
+		
+		// Save workflow
+		if err := s.workflowRepo.Save(ctx, workflow); err != nil {
+			return err
+		}
+		
+		// Execute approved action
+		return s.executeApprovedAction(ctx, workflow)
+	} else if status == "rejected" {
+		workflow.Reject()
+		
+		// Save workflow
+		if err := s.workflowRepo.Save(ctx, workflow); err != nil {
+			return err
+		}
+	} else {
+		return fmt.Errorf("invalid status: %s", status)
+	}
+	
+	return nil
+}
+
+// GetWorkflowStats gets workflow statistics
+func (s *WorkflowService) GetWorkflowStats(ctx context.Context) (map[string]int64, error) {
+	return s.workflowRepo.GetWorkflowStats(ctx)
+}
+
+// GetWorkflowTypeStats gets workflow type statistics
+func (s *WorkflowService) GetWorkflowTypeStats(ctx context.Context) (map[string]int64, error) {
+	return s.workflowRepo.GetWorkflowTypeStats(ctx)
+}
+
+// GetAssetWorkflowHistory gets workflow history for an asset
+func (s *WorkflowService) GetAssetWorkflowHistory(ctx context.Context, assetID string) ([]*model.Workflow, error) {
+	return s.workflowRepo.FindByAssetID(ctx, assetID)
+}
+
+// executeApprovedAction executes the action associated with an approved workflow
+func (s *WorkflowService) executeApprovedAction(ctx context.Context, workflow *model.Workflow) error {
+	// Find asset
+	asset, err := s.assetRepo.FindByAssetID(ctx, workflow.AssetID)
+	if err != nil {
+		return err
+	}
+	
+	// Execute action based on workflow type
+	if workflow.IsAssetOnboarding() {
+		// Set asset status to online
+		asset.SetStatus(model.OnlineStatus)
+	} else if workflow.IsAssetDecommission() {
+		// Set asset status to decommissioned
+		asset.SetStatus(model.DecommissionedStatus)
+	} else if workflow.IsStatusChange() {
+		// Toggle asset status between online and offline
+		if asset.IsOnline() {
+			asset.SetStatus(model.OfflineStatus)
+		} else {
+			asset.SetStatus(model.OnlineStatus)
+		}
+	} else if workflow.IsMaintenanceRequest() {
+		// Set asset status to maintenance
+		asset.SetStatus(model.MaintenanceStatus)
+	} else {
+		return fmt.Errorf("unknown workflow type: %s", workflow.Type)
+	}
+	
+	// Save asset
+	return s.assetRepo.Save(ctx, asset)
+}
+
+// SubmitToFeishu submits a workflow to Feishu (simulated)
+func (s *WorkflowService) SubmitToFeishu(ctx context.Context, workflow *model.Workflow) (string, error) {
+	// Simulate Feishu API call
+	// In real implementation, this would make HTTP request to Feishu API
+	feishuID := fmt.Sprintf("FEISHU-%d", time.Now().Unix())
+	
+	// Update workflow with Feishu ID
+	workflow.SetFeishuID(feishuID)
+	
+	// Save workflow
+	if err := s.workflowRepo.Save(ctx, workflow); err != nil {
+		return "", err
+	}
+	
+	return feishuID, nil
+}
