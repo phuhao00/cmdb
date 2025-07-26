@@ -35,12 +35,3 @@ npm-debug.log*
 .npm
 # Testing
 coverage/
-
-# Additional files to ignore
-backend/cmdb-api
-package-lock.json
-Users/
-c/
-frontend-react/node_modules/
-frontend-react/build/
-backend/interfaces/api/reports_handler.go

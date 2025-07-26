@@ -1,0 +1,21 @@
+<!-- ... existing code ... -->
+<button id="add-asset-btn" class="btn btn-primary">+ Add Asset</button>
+<!-- ... existing code ... -->
+
+<script>
+    document.getElementById('add-asset-btn').addEventListener('click', function() {
+        // 添加资产逻辑
+        console.log('Adding new asset...');
+        // 可以在这里添加弹窗或其他交互逻辑
+    });
+
+    // 确保其他按钮也有事件监听器
+    document.querySelectorAll('.btn-secondary').forEach(button => {
+        button.addEventListener('click', function() {
+            const action = this.textContent;
+            console.log(`Action: ${action}`);
+            // 根据action执行相应逻辑
+        });
+    });
+</script>
+<!-- ... existing code ... -->

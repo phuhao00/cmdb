@@ -1,5 +1,5 @@
 // API Configuration
-const API_BASE_URL = window.location.protocol + '//' + window.location.hostname + (window.location.port ? ':3000' : '') + '/api/v1';
+const API_BASE_URL = window.location.protocol + '//' + window.location.hostname + (window.location.port ? ':8081' : '') + '/api/v1';
 
 // Data storage
 let assets = [];
@@ -11,6 +11,18 @@ document.addEventListener('DOMContentLoaded', function() {
     setupNavigation();
     loadAssetsFromAPI();
     loadWorkflowsFromAPI();
+    
+    // Add event listener for workflow form submission
+    const workflowForm = document.getElementById('workflow-form-element');
+    if (workflowForm) {
+        workflowForm.addEventListener('submit', submitWorkflow);
+    }
+    
+    // Add event listener for asset form submission
+    const assetForm = document.getElementById('asset-form');
+    if (assetForm) {
+        assetForm.addEventListener('submit', submitAsset);
+    }
     
     // Initialize dashboard charts if Chart.js is loaded
     if (typeof Chart !== 'undefined' && document.getElementById('asset-status-chart')) {
@@ -54,9 +66,11 @@ async function loadAssetsFromAPI() {
 
 async function loadWorkflowsFromAPI() {
     try {
-        const response = await fetch(`${API_BASE_URL}/workflows?status=pending`);
+        const response = await fetch(`${API_BASE_URL}/workflows`);
         if (response.ok) {
-            pendingApprovals = await response.json();
+            const workflows = await response.json();
+            loadWorkflows(workflows); // 更新工作流表格
+            pendingApprovals = workflows.filter(w => w.status === 'pending'); // 更新待审批列表
             loadPendingApprovals();
         } else {
             throw new Error('Failed to load workflows');
@@ -77,6 +91,16 @@ async function loadDashboardStats() {
             document.getElementById('online-assets').textContent = stats.online || 0;
             document.getElementById('offline-assets').textContent = stats.offline || 0;
             document.getElementById('pending-approvals').textContent = stats.pending || 0;
+            document.getElementById('maintenance-assets').textContent = stats.maintenance || 0;
+            document.getElementById('decommissioned-assets').textContent = stats.decommissioned || 0;
+            
+            // Update cost information
+            if (stats.totalCost !== undefined) {
+                document.getElementById('total-cost').textContent = `$${stats.totalCost.toLocaleString()}`;
+            }
+            if (stats.annualCost !== undefined) {
+                document.getElementById('annual-cost').textContent = `$${stats.annualCost.toLocaleString()}`;
+            }
         }
     } catch (error) {
         console.error('Error loading stats:', error);
@@ -110,7 +134,7 @@ function createAssetRow(asset) {
         <td>${capitalizeFirst(asset.type)}</td>
         <td><span class="status-badge status-${asset.status}">${capitalizeFirst(asset.status)}</span></td>
         <td>${asset.location}</td>
-        <td>${updatedAt}</td>
+        <td>${asset.description || ''}</td>
         <td>
             <button class="action-btn view" onclick="openAssetDetailModal('${objectId}')">
                 <i class="fas fa-eye"></i>
@@ -131,19 +155,15 @@ function createAssetRow(asset) {
 }
 
 async function filterAssets() {
-    const statusFilter = document.getElementById('status-filter').value;
-    const typeFilter = document.getElementById('type-filter').value;
-    const searchTerm = document.getElementById('search-input').value;
+    const searchTerm = document.getElementById('search-input').value.toLowerCase();
 
     try {
-        let url = `${API_BASE_URL}/assets?`;
-        const params = new URLSearchParams();
+        let url = `${API_BASE_URL}/assets`;
+        if (searchTerm) {
+            url += `?search=${encodeURIComponent(searchTerm)}`;
+        }
         
-        if (statusFilter) params.append('status', statusFilter);
-        if (typeFilter) params.append('type', typeFilter);
-        if (searchTerm) params.append('search', searchTerm);
-        
-        const response = await fetch(url + params.toString());
+        const response = await fetch(url);
         if (response.ok) {
             assets = await response.json();
             loadAssets();
@@ -430,7 +450,7 @@ function decommissionFromDetail() {
 // Asset Modal Functions
 function openAssetModal(assetId = null) {
     const modal = document.getElementById('asset-modal');
-    const title = document.getElementById('modal-title');
+    const title = document.getElementById('asset-modal').querySelector('h2');
     const form = document.getElementById('asset-form');
 
     if (assetId) {
@@ -550,34 +570,55 @@ async function deleteAsset(assetId) {
     }
 }
 
-// Workflow Functions
-function startWorkflow(workflowType) {
-    currentWorkflowType = workflowType;
-    const modal = document.getElementById('workflow-modal');
-    const title = document.getElementById('workflow-title');
-    const assetSelect = document.getElementById('workflow-asset');
+// Workflow Management
+function loadWorkflows(workflows) {
+    const tbody = document.getElementById('workflows-table-body');
+    if (!tbody) {
+        console.error('Workflows table body not found');
+        return;
+    }
 
-    // Set title based on workflow type
-    const titles = {
-        'onboarding': 'Asset Onboarding Workflow',
-        'decommission': 'Asset Decommission Workflow',
-        'maintenance': 'Maintenance Request Workflow',
-        'status-change': 'Status Change Workflow'
-    };
-    
-    title.textContent = titles[workflowType] || 'Start Workflow';
+    tbody.innerHTML = '';
 
-    // Populate asset dropdown
-    assetSelect.innerHTML = '<option value="">Select Asset</option>';
-    assets.forEach(asset => {
-        const option = document.createElement('option');
-        const assetId = asset.assetId || asset.id;
-        option.value = assetId;
-        option.textContent = `${assetId} - ${asset.name}`;
-        assetSelect.appendChild(option);
+    workflows.forEach(workflow => {
+        const row = createWorkflowRow(workflow);
+        tbody.appendChild(row);
     });
+}
 
-    modal.style.display = 'block';
+function createWorkflowRow(workflow) {
+    const row = document.createElement('tr');
+    const createdAt = workflow.createdAt ? new Date(workflow.createdAt).toLocaleString() : 'N/A';
+    
+    row.innerHTML = `
+        <td>${workflow.workflowId || workflow.id}</td>
+        <td>${workflow.type}</td>
+        <td>${workflow.assetName}</td>
+        <td>${capitalizeFirst(workflow.priority)}</td>
+        <td>${workflow.reason}</td>
+        <td><span class="status-badge status-${workflow.status}">${capitalizeFirst(workflow.status)}</span></td>
+        <td>
+            ${workflow.status === 'pending' ? `
+                <button class="action-btn approve" onclick="approveWorkflow('${workflow.id}')">
+                    <i class="fas fa-check"></i>
+                </button>
+                <button class="action-btn reject" onclick="rejectWorkflow('${workflow.id}')">
+                    <i class="fas fa-times"></i>
+                </button>
+            ` : `
+                <button class="action-btn view" onclick="viewWorkflow('${workflow.id}')">
+                    <i class="fas fa-eye"></i>
+                </button>
+            `}
+        </td>
+    `;
+    
+    return row;
+}
+
+function viewWorkflow(workflowId) {
+    // This would show detailed information about a workflow
+    showNotification('Workflow details feature would be implemented here', 'info');
 }
 
 async function startWorkflowForAsset(workflowType, assetId, reason) {
@@ -638,7 +679,7 @@ async function submitWorkflow(event) {
     }
 
     const workflowData = {
-        type: capitalizeFirst(currentWorkflowType.replace('-', ' ')),
+        type: 'Asset Onboarding', // Default type
         assetId: assetId,
         assetName: asset.name,
         requester: 'Current User',
@@ -657,7 +698,7 @@ async function submitWorkflow(event) {
 
         if (response.ok) {
             showNotification('Workflow submitted to Feishu for approval', 'success');
-            closeWorkflowModal();
+            hideWorkflowForm();
             loadWorkflowsFromAPI();
             loadDashboardStats();
         } else {

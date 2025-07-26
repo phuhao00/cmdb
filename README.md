@@ -9,6 +9,7 @@ A modern Configuration Management Database system for tracking IT assets and int
 - Monitor asset status (online, offline, maintenance, decommissioned)
 - Record asset details including location, description, and cost information
 - Bulk asset creation for easy onboarding
+- Asset lifecycle management
 
 ### Cost Tracking
 - Track purchase price and annual costs for each asset
@@ -21,6 +22,7 @@ A modern Configuration Management Database system for tracking IT assets and int
 - Status change requests with automated workflow creation
 - Maintenance scheduling with approval processes
 - Decommissioning workflows for end-of-life assets
+- Feishu webhook integration for real approval processes
 
 ### Dashboard & Visualization
 - Real-time asset status overview
@@ -36,11 +38,13 @@ A modern Configuration Management Database system for tracking IT assets and int
 
 ## Technology Stack
 
-- **Frontend**: HTML, CSS, JavaScript with Chart.js for data visualization
+- **Frontend**: 
+  - Traditional implementation: HTML, CSS, JavaScript with Chart.js for data visualization
+  - Modern implementation: React with styled-components
 - **Backend**: Go with Gin framework
 - **Database**: MongoDB for flexible data storage
 - **Containerization**: Docker & Docker Compose for easy deployment
-- **Proxy**: Express with http-proxy-middleware for development
+- **Service Discovery**: Consul for microservices architecture
 
 ## Quick Start
 
@@ -71,75 +75,87 @@ A modern Configuration Management Database system for tracking IT assets and int
 
 4. **Access the Application**:
    - Frontend: http://localhost:3000
-   - Backend API: http://localhost:8080
+   - Backend API: http://localhost:8081
+
+## Database Initialization
+
+The system automatically initializes the database with realistic sample data on first run, including:
+- 16 sample assets across 4 categories (servers, network equipment, storage, workstations)
+- 8 sample workflows with various statuses (approved, pending, rejected)
+- Proper indexing for optimal query performance
 
 ## API Endpoints
 
 ### Assets
-- `GET /api/assets` - List all assets
-- `POST /api/assets` - Create a new asset
-- `GET /api/assets/:id` - Get asset by ID
-- `PUT /api/assets/:id` - Update asset details
-- `DELETE /api/assets/:id` - Request asset decommission
-- `GET /api/assets/stats` - Get asset statistics
-- `GET /api/assets/types` - Get asset types distribution
-- `GET /api/assets/locations` - Get asset locations distribution
-- `GET /api/assets/costs` - Get asset cost summary
-- `GET /api/assets/critical` - Get critical assets
-- `PUT /api/assets/:id/costs` - Update asset costs
+- `GET /api/v1/assets` - List all assets
+- `POST /api/v1/assets` - Create a new asset
+- `GET /api/v1/assets/:id` - Get asset by ID
+- `PUT /api/v1/assets/:id` - Update asset details
+- `DELETE /api/v1/assets/:id` - Request asset decommission
+- `GET /api/v1/assets/stats` - Get asset statistics
+- `GET /api/v1/assets/types` - Get asset types distribution
+- `GET /api/v1/assets/locations` - Get asset locations distribution
+- `GET /api/v1/assets/costs` - Get asset cost summary
+- `GET /api/v1/assets/critical` - Get critical assets
+- `PUT /api/v1/assets/:id/costs` - Update asset costs
 
 ### Workflows
-- `GET /api/workflows` - List all workflows
-- `POST /api/workflows` - Create a new workflow
-- `GET /api/workflows/:id` - Get workflow by ID
-- `PUT /api/workflows/:id` - Update workflow
-- `GET /api/workflows/stats` - Get workflow statistics
+- `GET /api/v1/workflows` - List all workflows
+- `POST /api/v1/workflows` - Create a new workflow
+- `GET /api/v1/workflows/:id` - Get workflow by ID
+- `PUT /api/v1/workflows/:id` - Update workflow
+- `PUT /api/v1/workflows/:id/approve` - Approve workflow
+- `PUT /api/v1/workflows/:id/reject` - Reject workflow
+- `GET /api/v1/workflows/stats` - Get workflow statistics
 
 ### Reports
-- `GET /api/reports/inventory` - Generate inventory report
-- `GET /api/reports/lifecycle` - Generate lifecycle report
-- `GET /api/reports/compliance` - Generate compliance report
+- `GET /api/v1/reports/inventory` - Generate inventory report
+- `GET /api/v1/reports/lifecycle` - Generate lifecycle report
+- `GET /api/v1/reports/compliance` - Generate compliance report
 
-## For IDC/Data Center Managers
+## Frontend Implementations
 
-This CMDB is specifically designed to help IDC and data center managers:
+The project includes two frontend implementations:
 
-1. **Quick Status Overview**: The dashboard provides an instant view of your entire infrastructure health
-2. **Cost Transparency**: Track both capital expenditure (purchase price) and operational expenditure (annual costs)
-3. **Critical Asset Monitoring**: Focus on your most important systems (typically online servers)
-4. **Operational Insights**: Understand workflow patterns and approval bottlenecks
-5. **Compliance Ready**: Generate reports for audits and compliance verification
+1. **Traditional Frontend** ([frontend](file:///c:/Users/HHaou/cmdb/frontend) directory):
+   - Plain HTML/CSS/JavaScript implementation
+   - Direct API integration
+   - Lightweight and fast
+
+2. **React Frontend** ([frontend-react](file:///c:/Users/HHaou/cmdb/frontend-react) directory):
+   - Modern React-based implementation
+   - Component-based architecture
+   - Styled with styled-components
+   - Enhanced user experience
+
+Both implementations provide the same functionality and connect to the same backend API.
+
+## Deployment Architecture
+
+The system uses a microservices architecture with the following components:
+- MongoDB for data persistence
+- Consul for service discovery
+- Backend API service
+- Frontend web application
+- All services containerized with Docker
 
 ## Development
 
-### Backend Development
-```bash
-cd backend
-go run main.go
-```
+To develop and contribute to this project:
 
-### Frontend Development
-```bash
-npm start
-```
+1. Backend development:
+   ```bash
+   cd backend
+   go run main.go
+   ```
 
-### Running Both Services
-```bash
-npm run start:all
-```
+2. Frontend development (traditional):
+   ```bash
+   npm start
+   ```
 
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a pull request
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Support
-
-For support, please open an issue on the GitHub repository or contact the development team.
+3. Frontend development (React):
+   ```bash
+   cd frontend-react
+   npm start
+   ```
