@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "backend": "cd backend && go run main.go",
+    "backend": "cd backend && PORT=8081 go run main.go",
     "start:all": "concurrently \"npm run dev\" \"npm run backend\""
   },
   "dependencies": {

@@ -4,9 +4,9 @@ const http = require('http');
 const cors = require('cors');
 
 const app = express();
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 3000;
 const BACKEND_HOST = process.env.BACKEND_HOST || 'localhost';
-const BACKEND_PORT = process.env.BACKEND_PORT || 8080;
+const BACKEND_PORT = process.env.BACKEND_PORT || 8081;
 
 // Middleware
 app.use(cors());

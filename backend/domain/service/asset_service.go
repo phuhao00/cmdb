@@ -262,3 +262,13 @@ func (s *AssetService) GetAssetTypes(ctx context.Context) (map[string]int64, err
 func (s *AssetService) GetAssetLocations(ctx context.Context) (map[string]int64, error) {
 	return s.assetRepo.GetAssetLocations(ctx)
 }
+
+// GetAssets gets all assets with optional filtering
+func (s *AssetService) GetAssets(ctx context.Context, filter map[string]interface{}) ([]*model.Asset, error) {
+	return s.assetRepo.FindAll(ctx, filter)
+}
+
+// GetAssetByID gets an asset by its ID
+func (s *AssetService) GetAssetByID(ctx context.Context, id primitive.ObjectID) (*model.Asset, error) {
+	return s.assetRepo.FindByID(ctx, id)
+}

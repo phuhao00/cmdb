@@ -14,10 +14,15 @@
             <div class="nav-container">
                 <h1 class="nav-logo"><i class="fas fa-database"></i> CMDB</h1>
                 <ul class="nav-menu">
-                    <li class="nav-item"><a href="#dashboard" class="nav-link">Dashboard</a></li>
-                    <li class="nav-item"><a href="#assets" class="nav-link">Assets</a></li>
-                    <li class="nav-item"><a href="#workflows" class="nav-link">Workflows</a></li>
-                    <li class="nav-item"><a href="#reports" class="nav-link">Reports</a></li>
+                    <li class="nav-item"><a href="#dashboard" class="nav-link" data-lang="nav-dashboard">Dashboard</a></li>
+                    <li class="nav-item"><a href="#assets" class="nav-link" data-lang="nav-assets">Assets</a></li>
+                    <li class="nav-item"><a href="#workflows" class="nav-link" data-lang="nav-workflows">Workflows</a></li>
+                    <li class="nav-item"><a href="#reports" class="nav-link" data-lang="nav-reports">Reports</a></li>
+                    <li class="nav-item">
+                        <button id="language-toggle" class="btn btn-secondary" onclick="toggleLanguage()">
+                            中文
+                        </button>
+                    </li>
                 </ul>
             </div>
         </nav>
@@ -28,9 +33,9 @@
         <section id="dashboard" class="dashboard">
             <div class="container">
                 <div class="section-header">
-                    <h2>CMDB Dashboard</h2>
+                    <h2 data-lang="dashboard-title">CMDB Dashboard</h2>
                     <button class="btn btn-primary" onclick="refreshDashboard()">
-                        <i class="fas fa-sync-alt"></i> Refresh
+                        <i class="fas fa-sync-alt"></i> <span data-lang="refresh">Refresh</span>
                     </button>
                 </div>
                 
@@ -39,42 +44,57 @@
                         <div class="stat-icon"><i class="fas fa-server"></i></div>
                         <div class="stat-info">
                             <h3 id="total-assets">0</h3>
-                            <p>Total Assets</p>
+                            <p data-lang="total-assets">Total Assets</p>
                         </div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon online"><i class="fas fa-check-circle"></i></div>
                         <div class="stat-info">
                             <h3 id="online-assets">0</h3>
-                            <p>Online Assets</p>
+                            <p data-lang="online-assets">Online Assets</p>
                         </div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon offline"><i class="fas fa-times-circle"></i></div>
                         <div class="stat-info">
                             <h3 id="offline-assets">0</h3>
-                            <p>Offline Assets</p>
+                            <p data-lang="offline-assets">Offline Assets</p>
                         </div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon pending"><i class="fas fa-clock"></i></div>
                         <div class="stat-info">
                             <h3 id="pending-approvals">0</h3>
-                            <p>Pending Approvals</p>
+                            <p data-lang="pending-approvals">Pending Approvals</p>
                         </div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon maintenance"><i class="fas fa-tools"></i></div>
                         <div class="stat-info">
                             <h3 id="maintenance-assets">0</h3>
-                            <p>In Maintenance</p>
+                            <p data-lang="maintenance-assets">In Maintenance</p>
                         </div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon decommissioned"><i class="fas fa-archive"></i></div>
                         <div class="stat-info">
                             <h3 id="decommissioned-assets">0</h3>
-                            <p>Decommissioned</p>
+                            <p data-lang="decommissioned-assets">Decommissioned</p>
+                        </div>
+                    </div>
+                    <!-- Cost Summary Cards -->
+                    <div class="stat-card">
+                        <div class="stat-icon cost"><i class="fas fa-dollar-sign"></i></div>
+                        <div class="stat-info">
+                            <h3 id="total-cost">0</h3>
+                            <p data-lang="total-investment">Total Investment</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon cost"><i class="fas fa-file-invoice-dollar"></i></div>
+                        <div class="stat-info">
+                            <h3 id="annual-cost">0</h3>
+                            <p data-lang="annual-cost">Annual Cost</p>
                         </div>
                     </div>
                 </div>
@@ -89,325 +109,227 @@
                     <div class="chart-container">
                         <canvas id="type-distribution-chart"></canvas>
                     </div>
+                    <!-- New cost visualization chart -->
+                    <div class="chart-container">
+                        <canvas id="cost-distribution-chart"></canvas>
+                    </div>
                 </div>
                 
-                <div class="recent-activity">
-                    <h3>Recent Workflows</h3>
-                    <div id="recent-workflows" class="recent-workflows">
-                        <!-- Recent workflows will be populated by JavaScript -->
+                <div class="dashboard-sections">
+                    <div class="recent-activity">
+                        <h3 data-lang="recent-workflows">Recent Workflows</h3>
+                        <div id="recent-workflows" class="recent-workflows">
+                            <!-- Recent workflows will be populated by JavaScript -->
+                        </div>
+                    </div>
+                    
+                    <div class="critical-assets">
+                        <h3 data-lang="critical-assets">Critical Assets</h3>
+                        <div id="critical-assets" class="assets-list">
+                            <!-- Critical assets will be populated by JavaScript -->
+                        </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Asset Management Section -->
-        <section id="assets" class="assets">
+        <!-- Assets Section -->
+        <section id="assets" class="assets-section">
             <div class="container">
                 <div class="section-header">
-                    <h2>Asset Management</h2>
-                    <div class="button-group">
-                        <button class="btn btn-primary" onclick="openAssetModal()">
-                            <i class="fas fa-plus"></i> Add Asset
-                        </button>
-                        <button class="btn btn-secondary" onclick="openBulkAssetModal()">
-                            <i class="fas fa-file-import"></i> Bulk Import
-                        </button>
-                        <button class="btn btn-outline" onclick="exportAssets()">
-                            <i class="fas fa-file-export"></i> Export
-                        </button>
-                    </div>
+                    <h2 data-lang="assets-title">Asset Management</h2>
+                    <button class="btn btn-primary" onclick="showAssetForm()">
+                        <i class="fas fa-plus"></i> <span data-lang="add-asset">Add Asset</span>
+                    </button>
                 </div>
-
-                <!-- Asset Filters -->
-                <div class="filters">
-                    <select id="status-filter" onchange="filterAssets()">
-                        <option value="">All Status</option>
-                        <option value="online">Online</option>
-                        <option value="offline">Offline</option>
-                        <option value="maintenance">Maintenance</option>
-                        <option value="decommissioned">Decommissioned</option>
-                    </select>
-                    <select id="type-filter" onchange="filterAssets()">
-                        <option value="">All Types</option>
-                        <option value="server">Server</option>
-                        <option value="network">Network Device</option>
-                        <option value="storage">Storage</option>
-                        <option value="workstation">Workstation</option>
-                    </select>
-                    <input type="text" id="search-input" placeholder="Search assets..." onkeyup="filterAssets()">
+                
+                <div class="search-box">
+                    <input type="text" id="search-input" onkeyup="filterAssets()" placeholder="Search assets..." data-lang-placeholder="search-assets">
                 </div>
-
-                <!-- Asset Table -->
+                
                 <div class="table-container">
-                    <table class="asset-table">
+                    <table id="assets-table">
                         <thead>
                             <tr>
-                                <th>Asset ID</th>
-                                <th>Name</th>
-                                <th>Type</th>
-                                <th>Status</th>
-                                <th>Location</th>
-                                <th>Last Updated</th>
+                                <th data-lang="asset-name">Name</th>
+                                <th data-lang="asset-type">Type</th>
+                                <th data-lang="asset-status">Status</th>
+                                <th data-lang="asset-location">Location</th>
+                                <th data-lang="asset-description">Description</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="asset-table-body">
+                        <tbody id="assets-table-body">
                             <!-- Assets will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div id="no-assets-message" style="display: none;" data-lang="no-assets-found">
+                    No assets found
+                </div>
+            </div>
+        </section>
+
+        <!-- Workflows Section -->
+        <section id="workflows" class="workflows-section">
+            <div class="container">
+                <div class="section-header">
+                    <h2 data-lang="workflows-title">Workflow Management</h2>
+                    <button class="btn btn-primary" onclick="showWorkflowForm()">
+                        <i class="fas fa-plus"></i> <span data-lang="create-workflow">Create Workflow</span>
+                    </button>
+                </div>
+                
+                <div class="workflow-form" id="workflow-form" style="display: none;">
+                    <h3 data-lang="create-workflow">Create Workflow</h3>
+                    <form id="workflow-form-element">
+                        <div class="form-group">
+                            <label for="workflow-type" data-lang="workflow-type">Type</label>
+                            <select id="workflow-type" required>
+                                <option value="Asset Onboarding">Asset Onboarding</option>
+                                <option value="Asset Decommission">Asset Decommission</option>
+                                <option value="Status Change">Status Change</option>
+                                <option value="Maintenance Request">Maintenance Request</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="workflow-asset" data-lang="workflow-asset">Asset</label>
+                            <select id="workflow-asset" required>
+                                <!-- Assets will be populated by JavaScript -->
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="workflow-priority" data-lang="workflow-priority">Priority</label>
+                            <select id="workflow-priority" required>
+                                <option value="low" data-lang="low">Low</option>
+                                <option value="medium" data-lang="medium">Medium</option>
+                                <option value="high" data-lang="high">High</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="workflow-reason" data-lang="workflow-reason">Reason</label>
+                            <textarea id="workflow-reason" rows="3" required></textarea>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary" data-lang="submit">Submit</button>
+                            <button type="button" class="btn btn-secondary" onclick="hideWorkflowForm()" data-lang="cancel">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+                
+                <div class="table-container">
+                    <table id="workflows-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th data-lang="workflow-type">Type</th>
+                                <th>Asset</th>
+                                <th data-lang="workflow-priority">Priority</th>
+                                <th data-lang="workflow-reason">Reason</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="workflows-table-body">
+                            <!-- Workflows will be populated by JavaScript -->
                         </tbody>
                     </table>
                 </div>
             </div>
         </section>
 
-        <!-- Workflow Section -->
-        <section id="workflows" class="workflows">
-            <div class="container">
-                <h2>Feishu Approval Workflows</h2>
-                <div class="workflow-grid">
-                    <div class="workflow-card">
-                        <h3><i class="fas fa-upload"></i> Asset Onboarding</h3>
-                        <p>Submit new assets for approval and inventory registration</p>
-                        <button class="btn btn-secondary" onclick="startWorkflow('onboarding')">Start Workflow</button>
-                    </div>
-                    <div class="workflow-card">
-                        <h3><i class="fas fa-power-off"></i> Asset Decommission</h3>
-                        <p>Request asset decommissioning and removal from inventory</p>
-                        <button class="btn btn-secondary" onclick="startWorkflow('decommission')">Start Workflow</button>
-                    </div>
-                    <div class="workflow-card">
-                        <h3><i class="fas fa-tools"></i> Maintenance Request</h3>
-                        <p>Schedule maintenance and update asset status</p>
-                        <button class="btn btn-secondary" onclick="startWorkflow('maintenance')">Start Workflow</button>
-                    </div>
-                    <div class="workflow-card">
-                        <h3><i class="fas fa-exchange-alt"></i> Status Change</h3>
-                        <p>Request asset status changes (online/offline)</p>
-                        <button class="btn btn-secondary" onclick="startWorkflow('status-change')">Start Workflow</button>
-                    </div>
-                </div>
-
-                <!-- Pending Approvals -->
-                <div class="pending-approvals">
-                    <h3>Pending Approvals</h3>
-                    <div class="approval-list" id="approval-list">
-                        <!-- Approvals will be populated by JavaScript -->
-                    </div>
-                </div>
-            </div>
-        </section>
-
         <!-- Reports Section -->
-        <section id="reports" class="reports">
+        <section id="reports" class="reports-section">
             <div class="container">
-                <h2>Reports & Analytics</h2>
-                <div class="report-grid">
+                <h2 data-lang="reports-title">Reports</h2>
+                
+                <div class="report-cards">
                     <div class="report-card">
-                        <h3>Asset Inventory Report</h3>
-                        <p>Complete inventory of all assets with current status</p>
-                        <button class="btn btn-outline" onclick="generateReport('inventory')">Generate Report</button>
+                        <i class="fas fa-clipboard-list"></i>
+                        <h3 data-lang="inventory-report">Inventory Report</h3>
+                        <p>Complete inventory of all assets</p>
+                        <button class="btn btn-primary" onclick="downloadInventoryReport()" data-lang="download">Download</button>
                     </div>
+                    
                     <div class="report-card">
-                        <h3>Lifecycle Management</h3>
-                        <p>Asset lifecycle tracking and maintenance schedules</p>
-                        <button class="btn btn-outline" onclick="generateReport('lifecycle')">Generate Report</button>
+                        <i class="fas fa-history"></i>
+                        <h3 data-lang="lifecycle-report">Lifecycle Report</h3>
+                        <p>Asset age and lifecycle information</p>
+                        <button class="btn btn-primary" onclick="downloadLifecycleReport()" data-lang="download">Download</button>
                     </div>
+                    
                     <div class="report-card">
-                        <h3>Compliance Audit</h3>
-                        <p>Compliance status and audit trail reports</p>
-                        <button class="btn btn-outline" onclick="generateReport('compliance')">Generate Report</button>
+                        <i class="fas fa-check-circle"></i>
+                        <h3 data-lang="compliance-report">Compliance Report</h3>
+                        <p>Compliance and audit information</p>
+                        <button class="btn btn-primary" onclick="downloadComplianceReport()" data-lang="download">Download</button>
                     </div>
                 </div>
             </div>
         </section>
+
+        <!-- Asset Form Modal -->
+        <div id="asset-modal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeAssetModal()">&times;</span>
+                <h2 data-lang="add-asset">Add Asset</h2>
+                <form id="asset-form">
+                    <div class="form-group">
+                        <label for="asset-name" data-lang="asset-name">Name</label>
+                        <input type="text" id="asset-name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="asset-type" data-lang="asset-type">Type</label>
+                        <select id="asset-type" required>
+                            <option value="server" data-lang="server">Server</option>
+                            <option value="network" data-lang="network">Network</option>
+                            <option value="storage" data-lang="storage">Storage</option>
+                            <option value="workstation" data-lang="workstation">Workstation</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="asset-location" data-lang="asset-location">Location</label>
+                        <input type="text" id="asset-location" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="asset-description" data-lang="asset-description">Description</label>
+                        <textarea id="asset-description" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" data-lang="submit">Submit</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeAssetModal()" data-lang="cancel">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </main>
 
-    <!-- Asset Modal -->
-    <div id="asset-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="modal-title">Add New Asset</h3>
-                <span class="close" onclick="closeAssetModal()">&times;</span>
-            </div>
-            <form id="asset-form" onsubmit="submitAsset(event)">
-                <div class="form-group">
-                    <label for="asset-name">Asset Name *</label>
-                    <input type="text" id="asset-name" required>
-                </div>
-                <div class="form-group">
-                    <label for="asset-type">Asset Type *</label>
-                    <select id="asset-type" required>
-                        <option value="">Select Type</option>
-                        <option value="server">Server</option>
-                        <option value="network">Network Device</option>
-                        <option value="storage">Storage</option>
-                        <option value="workstation">Workstation</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="asset-location">Location *</label>
-                    <input type="text" id="asset-location" required>
-                </div>
-                <div class="form-group">
-                    <label for="asset-description">Description</label>
-                    <textarea id="asset-description" rows="3"></textarea>
-                </div>
-                <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" onclick="closeAssetModal()">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Submit for Approval</button>
-                </div>
-            </form>
-        </div>
-    </div>
+    <!-- Notification Container -->
+    <div id="notification-container"></div>
 
-    <!-- Bulk Asset Import Modal -->
-    <div id="bulk-asset-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Bulk Asset Import</h3>
-                <span class="close" onclick="closeBulkAssetModal()">&times;</span>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="bulk-import-format">Import Format</label>
-                    <select id="bulk-import-format">
-                        <option value="json">JSON</option>
-                        <option value="csv">CSV</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="bulk-asset-data">Paste your data below</label>
-                    <textarea id="bulk-asset-data" rows="10" placeholder="Paste JSON or CSV data here..."></textarea>
-                </div>
-                <div class="form-group">
-                    <div class="template-links">
-                        <a href="#" onclick="showJsonTemplate()">View JSON Template</a> | 
-                        <a href="#" onclick="showCsvTemplate()">View CSV Template</a>
-                    </div>
-                </div>
-                <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" onclick="closeBulkAssetModal()">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="processBulkImport()">Import Assets</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Workflow Modal -->
-    <div id="workflow-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="workflow-title">Start Workflow</h3>
-                <span class="close" onclick="closeWorkflowModal()">&times;</span>
-            </div>
-            <form id="workflow-form" onsubmit="submitWorkflow(event)">
-                <div class="form-group">
-                    <label for="workflow-asset">Select Asset</label>
-                    <select id="workflow-asset" required>
-                        <option value="">Select Asset</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="workflow-reason">Reason *</label>
-                    <textarea id="workflow-reason" rows="3" required placeholder="Please provide reason for this request..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="workflow-priority">Priority</label>
-                    <select id="workflow-priority">
-                        <option value="low">Low</option>
-                        <option value="medium" selected>Medium</option>
-                        <option value="high">High</option>
-                        <option value="urgent">Urgent</option>
-                    </select>
-                </div>
-                <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" onclick="closeWorkflowModal()">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Submit to Feishu</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Asset Detail Modal -->
-    <div id="asset-detail-modal" class="modal">
-        <div class="modal-content modal-large">
-            <div class="modal-header">
-                <h3 id="asset-detail-title">Asset Details</h3>
-                <span class="close" onclick="closeAssetDetailModal()">&times;</span>
-            </div>
-            <div class="modal-body">
-                <div class="asset-detail-container">
-                    <div class="asset-detail-info">
-                        <div class="detail-section">
-                            <h4>Basic Information</h4>
-                            <div class="detail-grid">
-                                <div class="detail-item">
-                                    <span class="detail-label">Asset ID:</span>
-                                    <span id="detail-asset-id" class="detail-value"></span>
-                                </div>
-                                <div class="detail-item">
-                                    <span class="detail-label">Name:</span>
-                                    <span id="detail-name" class="detail-value"></span>
-                                </div>
-                                <div class="detail-item">
-                                    <span class="detail-label">Type:</span>
-                                    <span id="detail-type" class="detail-value"></span>
-                                </div>
-                                <div class="detail-item">
-                                    <span class="detail-label">Status:</span>
-                                    <span id="detail-status" class="detail-value"></span>
-                                </div>
-                                <div class="detail-item">
-                                    <span class="detail-label">Location:</span>
-                                    <span id="detail-location" class="detail-value"></span>
-                                </div>
-                                <div class="detail-item">
-                                    <span class="detail-label">Created:</span>
-                                    <span id="detail-created" class="detail-value"></span>
-                                </div>
-                                <div class="detail-item">
-                                    <span class="detail-label">Last Updated:</span>
-                                    <span id="detail-updated" class="detail-value"></span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="detail-section">
-                            <h4>Description</h4>
-                            <p id="detail-description" class="detail-description"></p>
-                        </div>
-                    </div>
-                    <div class="asset-detail-actions">
-                        <button class="btn btn-primary" onclick="editAssetFromDetail()">
-                            <i class="fas fa-edit"></i> Edit Asset
-                        </button>
-                        <button class="btn btn-secondary" id="detail-status-btn">
-                            <i class="fas fa-power-off"></i> Change Status
-                        </button>
-                        <button class="btn btn-secondary" onclick="requestMaintenanceFromDetail()">
-                            <i class="fas fa-tools"></i> Request Maintenance
-                        </button>
-                        <button class="btn btn-danger" onclick="decommissionFromDetail()">
-                            <i class="fas fa-trash"></i> Decommission
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="asset-history">
-                    <h4>Workflow History</h4>
-                    <div id="asset-history-list" class="asset-history-list">
-                        <!-- Workflow history will be populated by JavaScript -->
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <footer>
-        <div class="container">
-            <p>&copy; 2024 CMDB Solutions. Integrated with Feishu Approval Workflows.</p>
-        </div>
-    </footer>
-
-    <script src="script.js"></script>
+    <!-- JavaScript Files -->
+    <script src="lang.js"></script>
     <script src="dashboard.js"></script>
+    <script src="script.js"></script>
+    <script>
+        // Initialize language on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            updatePageLanguage();
+        });
+        
+        // Language toggle function
+        function toggleLanguage() {
+            setLanguage(currentLanguage === 'en' ? 'zh' : 'en');
+        }
+    </script>
 </body>
 </html>

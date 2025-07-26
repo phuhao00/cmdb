@@ -26,7 +26,7 @@ echo "[4/5] Starting CMDB Backend API..."
 cd backend
 export MONGODB_URI="mongodb://admin:password123@localhost:27017/cmdb?authSource=admin"
 export CONSUL_ADDRESS="localhost:8500"
-export PORT=8080
+export PORT=8081
 export SERVICE_ADDRESS="localhost"
 go run main.go &
 BACKEND_PID=$!
@@ -35,19 +35,18 @@ echo
 echo "[5/5] Starting Frontend Server..."
 cd ..
 export BACKEND_HOST="localhost"
-export BACKEND_PORT=8080
+export BACKEND_PORT=8081
 npm start &
 FRONTEND_PID=$!
 
 echo
 echo "CMDB System started:"
-echo "- Frontend: http://localhost:8080"
-echo "- Backend API: http://localhost:8080/api/v1"
+echo "- Frontend: http://localhost:3000"
+echo "- Backend API: http://localhost:8081/api/v1"
 echo "- MongoDB: localhost:27017"
 echo "- Consul UI: http://localhost:8500"
 echo
 echo "Press Ctrl+C to stop all services"
 
 # Wait for user to press Ctrl+C
-trap "kill $BACKEND_PID $FRONTEND_PID; docker stop cmdb-mongodb cmdb-consul; echo 'Stopping all services...'" INT
-wait
+wait $BACKEND_PID $FRONTEND_PID

@@ -37,6 +37,31 @@ type AssetUpdateDTO struct {
 	Description string `json:"description"`
 }
 
+// AssetUpdateCostsDTO represents the data for updating asset costs
+type AssetUpdateCostsDTO struct {
+	PurchasePrice float64 `json:"purchasePrice"`
+	AnnualCost    float64 `json:"annualCost"`
+	Currency      string  `json:"currency"`
+}
+
+// AssetCostsDTO represents the cost summary data
+type AssetCostsDTO struct {
+	TotalInvestment float64 `json:"totalInvestment"`
+	AnnualCost      float64 `json:"annualCost"`
+	Servers         float64 `json:"servers"`
+	Network         float64 `json:"network"`
+	Storage         float64 `json:"storage"`
+	Workstations    float64 `json:"workstations"`
+}
+
+// CriticalAssetDTO represents a critical asset for display
+type CriticalAssetDTO struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Type   string `json:"type"`
+	Status string `json:"status"`
+}
+
 // AssetFilterDTO represents the filter criteria for assets
 type AssetFilterDTO struct {
 	Status   string    `form:"status"`
@@ -194,6 +219,82 @@ func (a *AssetApplication) GetAssetTypes(ctx context.Context) (map[string]int64,
 // GetAssetLocations gets asset locations with counts
 func (a *AssetApplication) GetAssetLocations(ctx context.Context) (map[string]int64, error) {
 	return a.assetService.GetAssetLocations(ctx)
+}
+
+// GetAssetCosts gets asset cost summary
+func (a *AssetApplication) GetAssetCosts(ctx context.Context) (*AssetCostsDTO, error) {
+	assets, err := a.assetService.GetAssets(ctx, make(map[string]interface{}))
+	if err != nil {
+		return nil, err
+	}
+	
+	costs := &AssetCostsDTO{}
+	
+	for _, asset := range assets {
+		// Add to total investment and annual cost
+		costs.TotalInvestment += asset.PurchasePrice
+		costs.AnnualCost += asset.AnnualCost
+		
+		// Add to category-specific costs
+		switch asset.Type {
+		case model.ServerType:
+			costs.Servers += asset.AnnualCost
+		case model.NetworkType:
+			costs.Network += asset.AnnualCost
+		case model.StorageType:
+			costs.Storage += asset.AnnualCost
+		case model.WorkstationType:
+			costs.Workstations += asset.AnnualCost
+		}
+	}
+	
+	return costs, nil
+}
+
+// GetCriticalAssets gets critical assets (online servers)
+func (a *AssetApplication) GetCriticalAssets(ctx context.Context) ([]*CriticalAssetDTO, error) {
+	// Filter for online servers
+	filter := map[string]interface{}{
+		"status": model.OnlineStatus,
+		"type":   model.ServerType,
+	}
+	
+	assets, err := a.assetService.GetAssets(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	
+	criticalAssets := make([]*CriticalAssetDTO, len(assets))
+	for i, asset := range assets {
+		criticalAssets[i] = &CriticalAssetDTO{
+			ID:     asset.ID.Hex(),
+			Name:   asset.Name,
+			Type:   string(asset.Type),
+			Status: string(asset.Status),
+		}
+	}
+	
+	return criticalAssets, nil
+}
+
+// UpdateAssetCosts updates the costs for an asset
+func (a *AssetApplication) UpdateAssetCosts(ctx context.Context, id string, costsDTO AssetUpdateCostsDTO) error {
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return err
+	}
+	
+	asset, err := a.assetService.GetAssetByID(ctx, objectID)
+	if err != nil {
+		return err
+	}
+	
+	// Update the asset costs
+	asset.UpdateCosts(costsDTO.PurchasePrice, costsDTO.AnnualCost, costsDTO.Currency)
+	
+	// Save the updated asset by calling the service method with correct parameters
+	_, err = a.assetService.UpdateAsset(ctx, asset.ID, asset.Name, asset.Location, asset.Description)
+	return err
 }
 
 // Helper function to map an asset to a DTO

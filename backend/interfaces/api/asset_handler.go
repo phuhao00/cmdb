@@ -33,6 +33,10 @@ func (h *AssetHandler) RegisterRoutes(router *gin.RouterGroup) {
 		assets.POST("/bulk", h.BulkCreateAssets)
 		assets.GET("/types", h.GetAssetTypes)
 		assets.GET("/locations", h.GetAssetLocations)
+		// New cost-related endpoints
+		assets.GET("/costs", h.GetAssetCosts)
+		assets.GET("/critical", h.GetCriticalAssets)
+		assets.PUT("/:id/costs", h.UpdateAssetCosts)
 	}
 }
 
@@ -209,4 +213,45 @@ func (h *AssetHandler) GetAssetLocations(c *gin.Context) {
 	}
 	
 	c.JSON(http.StatusOK, result)
+}
+
+// GetAssetCosts handles GET /assets/costs
+func (h *AssetHandler) GetAssetCosts(c *gin.Context) {
+	costs, err := h.assetApp.GetAssetCosts(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, costs)
+}
+
+// GetCriticalAssets handles GET /assets/critical
+func (h *AssetHandler) GetCriticalAssets(c *gin.Context) {
+	assets, err := h.assetApp.GetCriticalAssets(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, assets)
+}
+
+// UpdateAssetCosts handles PUT /assets/:id/costs
+func (h *AssetHandler) UpdateAssetCosts(c *gin.Context) {
+	id := c.Param("id")
+	
+	var costsDTO application.AssetUpdateCostsDTO
+	if err := c.ShouldBindJSON(&costsDTO); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	
+	err := h.assetApp.UpdateAssetCosts(c.Request.Context(), id, costsDTO)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{"message": "Asset costs updated successfully"})
 }

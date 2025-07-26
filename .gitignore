@@ -1,0 +1,46 @@
+node_modules
+# Build artifacts for Go
+backend/bin/
+backend/pkg/
+# Go workspace
+go.work
+# Environment files
+.env
+.env.local
+.env*.local
+# Log files
+*.log
+# Docker
+.dockerignore
+# OS specific files
+.DS_Store
+Thumbs.db
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+# Temporary files
+*~
+\#*\#
+# MongoDB data (if running locally)
+/mongo/data
+# Node modules
+/node_modules
+# Build directories
+/dist
+/build
+# NPM
+npm-debug.log*
+.npm
+# Testing
+coverage/
+
+# Additional files to ignore
+backend/cmdb-api
+package-lock.json
+Users/
+c/
+frontend-react/node_modules/
+frontend-react/build/
+backend/interfaces/api/reports_handler.go

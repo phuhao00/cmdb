@@ -36,6 +36,10 @@ type Asset struct {
 	Status      AssetStatus        `json:"status" bson:"status"`
 	Location    string             `json:"location" bson:"location"`
 	Description string             `json:"description" bson:"description"`
+	// Cost tracking fields
+	PurchasePrice float64            `json:"purchasePrice" bson:"purchasePrice"`
+	AnnualCost    float64            `json:"annualCost" bson:"annualCost"`
+	Currency      string             `json:"currency" bson:"currency"`
 	CreatedAt   time.Time          `json:"createdAt" bson:"createdAt"`
 	UpdatedAt   time.Time          `json:"updatedAt" bson:"updatedAt"`
 }
@@ -49,6 +53,7 @@ func NewAsset(name string, assetType AssetType, location string, description str
 		Status:      OfflineStatus, // New assets start offline
 		Location:    location,
 		Description: description,
+		Currency:    "USD", // Default currency
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
@@ -65,6 +70,14 @@ func (a *Asset) Update(name string, location string, description string) {
 	a.Name = name
 	a.Location = location
 	a.Description = description
+	a.UpdatedAt = time.Now()
+}
+
+// UpdateCosts updates the asset cost information
+func (a *Asset) UpdateCosts(purchasePrice float64, annualCost float64, currency string) {
+	a.PurchasePrice = purchasePrice
+	a.AnnualCost = annualCost
+	a.Currency = currency
 	a.UpdatedAt = time.Now()
 }
 

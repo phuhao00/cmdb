@@ -209,3 +209,13 @@ func (s *WorkflowService) SubmitToFeishu(ctx context.Context, workflow *model.Wo
 	
 	return feishuID, nil
 }
+
+// GetWorkflows gets all workflows with optional filtering
+func (s *WorkflowService) GetWorkflows(ctx context.Context, filter map[string]interface{}) ([]*model.Workflow, error) {
+	return s.workflowRepo.FindAll(ctx, filter)
+}
+
+// GetWorkflowByID gets a workflow by its ID
+func (s *WorkflowService) GetWorkflowByID(ctx context.Context, id primitive.ObjectID) (*model.Workflow, error) {
+	return s.workflowRepo.FindByID(ctx, id)
+}

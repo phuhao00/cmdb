@@ -17,16 +17,16 @@ timeout /t 10 /nobreak > nul
 
 echo.
 echo [4/5] Starting CMDB Backend API...
-start cmd /k "cd backend && set MONGODB_URI=mongodb://admin:password123@localhost:27017/cmdb?authSource=admin && set CONSUL_ADDRESS=localhost:8500 && set PORT=8080 && set SERVICE_ADDRESS=localhost && go run main.go"
+start cmd /k "cd backend && set MONGODB_URI=mongodb://admin:password123@localhost:27017/cmdb?authSource=admin && set CONSUL_ADDRESS=localhost:8500 && set PORT=8081 && set SERVICE_ADDRESS=localhost && go run main.go"
 
 echo.
 echo [5/5] Starting Frontend Server...
-start cmd /k "set BACKEND_HOST=localhost && set BACKEND_PORT=8080 && npm start"
+start cmd /k "set BACKEND_HOST=localhost && set BACKEND_PORT=8081 && npm start"
 
 echo.
 echo CMDB System started:
-echo - Frontend: http://localhost:8080
-echo - Backend API: http://localhost:8080/api/v1
+echo - Frontend: http://localhost:3000
+echo - Backend API: http://localhost:8081/api/v1
 echo - MongoDB: localhost:27017
 echo - Consul UI: http://localhost:8500
 echo.

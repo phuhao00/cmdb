@@ -10,11 +10,14 @@ function initDashboardCharts() {
             createAssetStatusChart(data.assetStats);
             createAssetTypeChart(data.assetTypes);
             createWorkflowStatusChart(data.workflowStats);
+            createCostDistributionChart(data.assetCosts);
+            updateCostSummary(data.assetCosts);
             updateRecentActivity(data.recentWorkflows);
+            updateCriticalAssets(data.criticalAssets);
         })
         .catch(error => {
             console.error('Error initializing dashboard:', error);
-            showNotification('Failed to load dashboard data', 'error');
+            showNotification(t('error-occurred'), 'error');
         });
 }
 
@@ -37,11 +40,21 @@ async function fetchDashboardData() {
         const recentWorkflowsResponse = await fetch(`${API_BASE_URL}/workflows?limit=5`);
         const recentWorkflows = await recentWorkflowsResponse.json();
         
+        // Fetch asset costs
+        const assetCostsResponse = await fetch(`${API_BASE_URL}/assets/costs`);
+        const assetCosts = await assetCostsResponse.json();
+        
+        // Fetch critical assets
+        const criticalAssetsResponse = await fetch(`${API_BASE_URL}/assets/critical`);
+        const criticalAssets = await criticalAssetsResponse.json();
+        
         return {
             assetStats,
             assetTypes,
             workflowStats,
-            recentWorkflows
+            recentWorkflows,
+            assetCosts,
+            criticalAssets
         };
     } catch (error) {
         console.error('Error fetching dashboard data:', error);
@@ -69,7 +82,7 @@ function createAssetStatusChart(assetStats) {
     // Process data
     for (const status in assetStats) {
         if (status !== 'total') {
-            labels.push(capitalizeFirst(status));
+            labels.push(t(status)); // Translate status
             data.push(assetStats[status]);
             colors.push(statusColors[status] || '#3498db');
         }
@@ -102,14 +115,13 @@ function createAssetStatusChart(assetStats) {
                 },
                 title: {
                     display: true,
-                    text: 'Asset Status Distribution',
+                    text: t('asset-status-distribution'), // Translate title
                     color: 'white',
                     font: {
                         size: 16
                     }
                 }
-            },
-            cutout: '60%'
+            }
         }
     });
 }
@@ -121,25 +133,27 @@ function createAssetTypeChart(assetTypes) {
     // Extract data from assetTypes
     const labels = [];
     const data = [];
-    const colors = ['#3498db', '#2ecc71', '#e74c3c', '#f39c12', '#9b59b6', '#1abc9c', '#34495e'];
+    const colors = [
+        '#3498db', '#2ecc71', '#e74c3c', '#f39c12', 
+        '#9b59b6', '#1abc9c', '#34495e', '#e67e22'
+    ];
     
     // Process data
-    assetTypes.forEach((item, index) => {
-        labels.push(capitalizeFirst(item.type));
-        data.push(item.count);
-    });
+    for (const type in assetTypes) {
+        labels.push(t(type)); // Translate type
+        data.push(assetTypes[type]);
+    }
     
     // Create chart
     new Chart(ctx, {
-        type: 'bar',
+        type: 'pie',
         data: {
             labels: labels,
             datasets: [{
-                label: 'Asset Count',
                 data: data,
-                backgroundColor: colors,
+                backgroundColor: colors.slice(0, labels.length),
                 borderColor: 'rgba(255, 255, 255, 0.5)',
-                borderWidth: 1
+                borderWidth: 2
             }]
         },
         options: {
@@ -147,33 +161,20 @@ function createAssetTypeChart(assetTypes) {
             maintainAspectRatio: false,
             plugins: {
                 legend: {
-                    display: false
+                    position: 'right',
+                    labels: {
+                        color: 'white',
+                        font: {
+                            size: 12
+                        }
+                    }
                 },
                 title: {
                     display: true,
-                    text: 'Assets by Type',
+                    text: t('asset-type-distribution'), // Translate title
                     color: 'white',
                     font: {
                         size: 16
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        color: 'rgba(255, 255, 255, 0.7)'
-                    },
-                    grid: {
-                        color: 'rgba(255, 255, 255, 0.1)'
-                    }
-                },
-                x: {
-                    ticks: {
-                        color: 'rgba(255, 255, 255, 0.7)'
-                    },
-                    grid: {
-                        color: 'rgba(255, 255, 255, 0.1)'
                     }
                 }
             }
@@ -186,30 +187,86 @@ function createWorkflowStatusChart(workflowStats) {
     const ctx = document.getElementById('workflow-status-chart').getContext('2d');
     
     // Extract data from workflowStats
-    const statusStats = workflowStats.statusStats;
     const labels = [];
     const data = [];
-    const colors = [];
-    
-    // Define colors for each status
-    const statusColors = {
-        'pending': '#f39c12',
-        'approved': '#2ecc71',
-        'rejected': '#e74c3c'
-    };
+    const colors = ['#3498db', '#2ecc71', '#e74c3c', '#f39c12'];
     
     // Process data
-    for (const status in statusStats) {
-        if (status !== 'total') {
-            labels.push(capitalizeFirst(status));
-            data.push(statusStats[status]);
-            colors.push(statusColors[status] || '#3498db');
-        }
+    for (const status in workflowStats) {
+        labels.push(t(status)); // Translate status
+        data.push(workflowStats[status]);
     }
     
     // Create chart
     new Chart(ctx, {
-        type: 'pie',
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: t('workflows'),
+                data: data,
+                backgroundColor: colors.slice(0, labels.length),
+                borderColor: 'rgba(255, 255, 255, 0.8)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                title: {
+                    display: true,
+                    text: t('workflow-status'),
+                    color: 'white',
+                    font: {
+                        size: 16
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        color: 'rgba(255, 255, 255, 0.8)'
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.2)'
+                    }
+                },
+                x: {
+                    ticks: {
+                        color: 'rgba(255, 255, 255, 0.8)'
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.2)'
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Create cost distribution chart
+function createCostDistributionChart(assetCosts) {
+    const ctx = document.getElementById('cost-distribution-chart').getContext('2d');
+    
+    // Extract data from assetCosts
+    const labels = [t('server'), t('network'), t('storage'), t('workstation')];
+    const data = [
+        assetCosts.servers || 0,
+        assetCosts.network || 0,
+        assetCosts.storage || 0,
+        assetCosts.workstations || 0
+    ];
+    
+    const colors = ['#3498db', '#2ecc71', '#e74c3c', '#f39c12'];
+    
+    // Create chart
+    new Chart(ctx, {
+        type: 'doughnut',
         data: {
             labels: labels,
             datasets: [{
@@ -234,7 +291,7 @@ function createWorkflowStatusChart(workflowStats) {
                 },
                 title: {
                     display: true,
-                    text: 'Workflow Status',
+                    text: t('cost-distribution-by-asset-type'),
                     color: 'white',
                     font: {
                         size: 16
@@ -245,68 +302,88 @@ function createWorkflowStatusChart(workflowStats) {
     });
 }
 
-// Update recent activity section
-function updateRecentActivity(recentWorkflows) {
+// Update cost summary cards
+function updateCostSummary(assetCosts) {
+    document.getElementById('total-cost').textContent = formatCurrency(assetCosts.totalInvestment || 0);
+    document.getElementById('annual-cost').textContent = formatCurrency(assetCosts.annualCost || 0);
+}
+
+// Update recent activity display
+function updateRecentActivity(workflows) {
     const container = document.getElementById('recent-workflows');
-    if (!container) return;
     
-    container.innerHTML = '';
-    
-    if (recentWorkflows.length === 0) {
-        container.innerHTML = '<p>No recent workflow activity</p>';
+    if (!workflows || workflows.length === 0) {
+        container.innerHTML = '<p>' + t('no-recent-workflows') + '</p>';
         return;
     }
     
-    recentWorkflows.forEach(workflow => {
-        const item = document.createElement('div');
-        item.className = `recent-workflow-item status-${workflow.status}`;
-        
-        const date = new Date(workflow.createdAt).toLocaleString();
-        
-        item.innerHTML = `
-            <div class="workflow-header">
-                <span class="workflow-type">${workflow.type}</span>
-                <span class="workflow-status">${capitalizeFirst(workflow.status)}</span>
+    container.innerHTML = workflows.map(workflow => `
+        <div class="workflow-item">
+            <div>
+                <strong>${workflow.name}</strong>
+                <div class="workflow-description">${workflow.description}</div>
             </div>
-            <div class="workflow-asset">${workflow.assetName}</div>
-            <div class="workflow-meta">
-                <span class="workflow-requester">${workflow.requester}</span>
-                <span class="workflow-date">${date}</span>
+            <div>
+                <span class="workflow-status ${workflow.status}">${t(workflow.status)}</span>
             </div>
-        `;
-        
-        container.appendChild(item);
-    });
+        </div>
+    `).join('');
 }
 
-// Load basic dashboard stats when Chart.js is not available
-function loadDashboardStats() {
-    fetch(`${API_BASE_URL}/assets/stats`)
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('total-assets').textContent = data.total || 0;
-            document.getElementById('online-assets').textContent = data.online || 0;
-            document.getElementById('offline-assets').textContent = data.offline || 0;
-            document.getElementById('maintenance-assets').textContent = data.maintenance || 0;
-        })
-        .catch(error => {
-            console.error('Error loading dashboard stats:', error);
-        });
-        
-    fetch(`${API_BASE_URL}/workflows/stats`)
-        .then(response => response.json())
-        .then(data => {
-            const statusStats = data.statusStats;
-            document.getElementById('pending-workflows').textContent = statusStats.pending || 0;
-            document.getElementById('total-workflows').textContent = statusStats.total || 0;
-        })
-        .catch(error => {
-            console.error('Error loading workflow stats:', error);
-        });
+// Update critical assets display
+function updateCriticalAssets(assets) {
+    const container = document.getElementById('critical-assets');
+    
+    if (!assets || assets.length === 0) {
+        container.innerHTML = '<p>' + t('no-critical-assets') + '</p>';
+        return;
+    }
+    
+    container.innerHTML = assets.map(asset => `
+        <div class="asset-item">
+            <div>
+                <strong>${asset.name}</strong>
+                <div class="asset-type">${t(asset.type)}</div>
+            </div>
+            <div>
+                <span class="asset-status ${asset.status}">${t(asset.status)}</span>
+            </div>
+        </div>
+    `).join('');
 }
 
-// Helper function to capitalize the first letter of a string
+// Helper function to capitalize first letter
 function capitalizeFirst(str) {
-    if (!str) return '';
     return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+// Helper function to format currency
+function formatCurrency(amount) {
+    return '$' + amount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+}
+
+// Refresh dashboard data
+function refreshDashboard() {
+    const refreshBtn = document.querySelector('.section-header .btn');
+    const originalText = refreshBtn.innerHTML;
+    refreshBtn.innerHTML = '<span class="spinner"></span> ' + t('refreshing');
+    refreshBtn.classList.add('loading');
+    
+    fetchDashboardData()
+        .then(data => {
+            // Reinitialize charts with new data
+            initDashboardCharts();
+            showNotification(t('dashboard-refreshed'), 'success');
+        })
+        .catch(error => {
+            console.error('Error refreshing dashboard:', error);
+            showNotification(t('error-occurred'), 'error');
+        })
+        .finally(() => {
+            // Restore button
+            setTimeout(() => {
+                refreshBtn.innerHTML = originalText;
+                refreshBtn.classList.remove('loading');
+            }, 1000);
+        });
 }

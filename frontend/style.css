@@ -37,6 +37,12 @@ body {
     align-items: center;
 }
 
+.nav-content {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+}
+
 .nav-logo {
     color: #3498db;
     font-size: 1.8rem;
@@ -65,6 +71,77 @@ body {
 
 .nav-link:hover {
     color: #3498db;
+}
+
+.nav-actions {
+    display: flex;
+    align-items: center;
+}
+
+/* Button Styles */
+.btn {
+    padding: 0.8rem 1.5rem;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-primary {
+    background: #3498db;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #2980b9;
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background: #95a5a6;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #7f8c8d;
+    transform: translateY(-2px);
+}
+
+.btn-outline {
+    background: transparent;
+    color: #3498db;
+    border: 2px solid #3498db;
+}
+
+.btn-outline:hover {
+    background: #3498db;
+    color: white;
+}
+
+.btn-icon {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 0.5rem 1rem;
+    border-radius: 30px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.btn-icon:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(0);
+}
+
+.btn-icon i {
+    font-size: 1.1rem;
 }
 
 /* Dashboard */
@@ -156,6 +233,14 @@ body {
     color: #f39c12;
 }
 
+.stat-icon.cost {
+    color: #27ae60;
+}
+
+.stat-icon.decommissioned {
+    color: #95a5a6;
+}
+
 .stat-info h3 {
     font-size: 2.5rem;
     margin-bottom: 0.5rem;
@@ -215,6 +300,7 @@ body {
 
 .btn-secondary:hover {
     background: #7f8c8d;
+    transform: translateY(-2px);
 }
 
 .btn-outline {
@@ -380,6 +466,24 @@ body {
 }
 
 /* Pending Approvals */
+.approvals-section {
+    margin-bottom: 2rem;
+}
+
+.approvals-section h3 {
+    color: #2c3e50;
+    margin-bottom: 1rem;
+    font-size: 1.4rem;
+}
+
+.approval-list {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
 .pending-approvals {
     background: white;
     padding: 2rem;
@@ -400,6 +504,16 @@ body {
     border: 1px solid #eee;
     border-radius: 8px;
     margin-bottom: 1rem;
+    transition: all 0.3s ease;
+}
+
+.approval-item:hover {
+    border-color: #3498db;
+    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.1);
+}
+
+.approval-item:last-child {
+    margin-bottom: 0;
 }
 
 .approval-info h4 {
@@ -410,6 +524,7 @@ body {
 .approval-info p {
     color: #666;
     font-size: 0.9rem;
+    margin: 0.25rem 0;
 }
 
 .approval-actions {
@@ -459,49 +574,59 @@ body {
     width: 100%;
     height: 100%;
     background-color: rgba(0,0,0,0.5);
-    backdrop-filter: blur(5px);
 }
 
 .modal-content {
-    background-color: white;
+    background-color: #fefefe;
     margin: 5% auto;
-    border-radius: 12px;
+    padding: 2rem;
+    border-radius: 10px;
     width: 90%;
     max-width: 500px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-}
-
-.modal-large {
-    max-width: 800px;
-}
-
-.modal-body {
-    padding: 1.5rem 2rem;
-}
-
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.5rem 2rem;
-    border-bottom: 1px solid #eee;
-}
-
-.modal-header h3 {
-    color: #2c3e50;
-    margin: 0;
+    position: relative;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
 }
 
 .close {
     color: #aaa;
+    float: right;
     font-size: 28px;
     font-weight: bold;
+    position: absolute;
+    right: 20px;
+    top: 10px;
     cursor: pointer;
-    transition: color 0.3s ease;
 }
 
-.close:hover {
-    color: #000;
+.close:hover,
+.close:focus {
+    color: black;
+    text-decoration: none;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+}
+
+/* Language Toggle Button */
+#language-toggle {
+    margin-left: 1rem;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    background: #3498db;
+    color: white;
+}
+
+#language-toggle:hover {
+    background: #2980b9;
+    transform: translateY(-2px);
 }
 
 /* Form */
@@ -721,8 +846,28 @@ footer {
 
 /* Responsive Design */
 @media (max-width: 768px) {
+    .nav-container {
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1rem;
+    }
+    
+    .nav-content {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
     .nav-menu {
-        display: none;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    
+    .nav-item {
+        margin: 0;
+    }
+    
+    .nav-actions {
+        margin-left: 1rem;
     }
     
     .stats-grid {
@@ -798,6 +943,93 @@ footer {
 
 .fade-in {
     animation: fadeIn 0.5s ease forwards;
+}
+
+/* Loading States */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.spinner {
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #3498db;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+    margin-right: 0.5rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Cost Distribution Chart */
+#cost-distribution-chart {
+    min-height: 300px;
+}
+
+.dashboard-sections {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.recent-activity h3, .critical-assets h3 {
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
+}
+
+.recent-workflows, .assets-list {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    padding: 1.5rem;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.workflow-item, .asset-item {
+    padding: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.workflow-item:last-child, .asset-item:last-child {
+    border-bottom: none;
+}
+
+.workflow-status, .asset-status {
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.workflow-status.pending, .asset-status.maintenance {
+    background: #f39c12;
+    color: white;
+}
+
+.workflow-status.approved, .asset-status.online {
+    background: #2ecc71;
+    color: white;
+}
+
+.workflow-status.rejected, .asset-status.offline {
+    background: #e74c3c;
+    color: white;
+}
+
+.asset-status.decommissioned {
+    background: #95a5a6;
+    color: white;
 }
 
 /* Loading States */

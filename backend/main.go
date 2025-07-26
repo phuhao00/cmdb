@@ -83,13 +83,15 @@ func main() {
 		// Register handlers
 		assetHandler := api.NewAssetHandler(assetApp)
 		workflowHandler := api.NewWorkflowHandler(workflowApp)
+		reportsHandler := api.NewReportsHandler(assetApp, workflowApp)
 
 		assetHandler.RegisterRoutes(apiGroup)
 		workflowHandler.RegisterRoutes(apiGroup)
+		reportsHandler.RegisterRoutes(apiGroup)
 	}
 
 	// Get server port
-	port := getEnv("PORT", "8080")
+	port := getEnv("PORT", "8081")
 	serverAddress := fmt.Sprintf(":%s", port)
 
 	// Register service with Consul if available

@@ -1,5 +1,5 @@
 // API Configuration
-const API_BASE_URL = window.location.protocol + '//' + window.location.hostname + (window.location.port ? ':8080' : '') + '/api/v1';
+const API_BASE_URL = window.location.protocol + '//' + window.location.hostname + (window.location.port ? ':3000' : '') + '/api/v1';
 
 // Data storage
 let assets = [];
@@ -85,7 +85,11 @@ async function loadDashboardStats() {
 
 // Asset Management
 function loadAssets() {
-    const tbody = document.getElementById('asset-table-body');
+    const tbody = document.getElementById('assets-table-body');
+    if (!tbody) {
+        console.error('Asset table body not found');
+        return;
+    }
     tbody.innerHTML = '';
 
     assets.forEach(asset => {
@@ -122,6 +126,7 @@ function createAssetRow(asset) {
             </button>
         </td>
     `;
+    
     return row;
 }
 
@@ -667,6 +672,10 @@ async function submitWorkflow(event) {
 // Pending Approvals
 function loadPendingApprovals() {
     const container = document.getElementById('approval-list');
+    if (!container) {
+        console.error('Approval list container not found');
+        return;
+    }
     container.innerHTML = '';
 
     if (pendingApprovals.length === 0) {
@@ -689,11 +698,12 @@ function loadPendingApprovals() {
                 <button class="btn btn-primary" onclick="approveWorkflow('${approval.id}')">
                     <i class="fas fa-check"></i> Approve
                 </button>
-                <button class="btn btn-secondary" onclick="rejectWorkflow('${approval.id}')">
+                <button class="btn btn-danger" onclick="rejectWorkflow('${approval.id}')">
                     <i class="fas fa-times"></i> Reject
                 </button>
             </div>
         `;
+        
         container.appendChild(item);
     });
 }
@@ -827,6 +837,40 @@ function getNotificationColor(type) {
     return colors[type] || '#3498db';
 }
 
+// UI Functions for forms
+function showAssetForm() {
+    openAssetModal();
+}
+
+function showWorkflowForm() {
+    document.getElementById('workflow-form').style.display = 'block';
+}
+
+function hideWorkflowForm() {
+    document.getElementById('workflow-form').style.display = 'none';
+}
+
+// Dashboard refresh function
+function refreshDashboard() {
+    showNotification('Refreshing dashboard...', 'info');
+    loadAssetsFromAPI();
+    loadWorkflowsFromAPI();
+    loadDashboardStats();
+}
+
+// Report download functions
+async function downloadInventoryReport() {
+    await generateReport('inventory');
+}
+
+async function downloadLifecycleReport() {
+    await generateReport('lifecycle');
+}
+
+async function downloadComplianceReport() {
+    await generateReport('compliance');
+}
+
 // Modal click outside to close
 window.onclick = function(event) {
     const assetModal = document.getElementById('asset-modal');
@@ -855,3 +899,8 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+// Update asset type translations
+function t(key) {
+    return translations[currentLanguage][key] || translations['en'][key] || key;
+}

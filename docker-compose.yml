@@ -35,11 +35,11 @@ services:
     container_name: cmdb-api
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "8081:8081"
     environment:
-      MONGODB_URI: mongodb://admin:password123@mongodb:27017/cmdb?authSource=admin
+      MONGO_URI: mongodb://admin:password123@mongodb:27017/cmdb?authSource=admin
       CONSUL_ADDRESS: consul:8500
-      PORT: 8080
+      PORT: 8081
       SERVICE_ADDRESS: cmdb-api
     depends_on:
       - mongodb
@@ -54,10 +54,10 @@ services:
     container_name: cmdb-frontend
     restart: unless-stopped
     ports:
-      - "80:8080"
+      - "3000:3000"
     environment:
       BACKEND_HOST: cmdb-api
-      BACKEND_PORT: 8080
+      BACKEND_PORT: 8081
     depends_on:
       - cmdb-api
     networks:
