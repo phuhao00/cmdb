@@ -108,54 +108,34 @@ func (s *WorkflowService) RejectWorkflow(ctx context.Context, id primitive.Objec
 }
 
 // HandleFeishuWebhook handles a webhook from Feishu
-func (s *WorkflowService) HandleFeishuWebhook(ctx context.Context, feishuID string, status string) error {
-	// Find workflow
-	workflow, err := s.workflowRepo.FindByFeishuID(ctx, feishuID)
+func (s *WorkflowService) HandleFeishuWebhook(ctx context.Context, workflowID string, status string) error {
+	// Find workflow by Feishu ID (workflowID from webhook is actually Feishu ID)
+	workflow, err := s.workflowRepo.FindByFeishuID(ctx, workflowID)
 	if err != nil {
 		return err
 	}
 	
-	// Check if workflow is already processed
-	if !workflow.IsPending() {
-		return errors.New("workflow is already processed")
-	}
-	
-	// Update workflow status
+	// Process based on status
 	if status == "approved" {
-		workflow.Approve()
-		
-		// Save workflow
-		if err := s.workflowRepo.Save(ctx, workflow); err != nil {
-			return err
-		}
-		
-		// Execute approved action
-		return s.executeApprovedAction(ctx, workflow)
+		return s.ApproveWorkflow(ctx, workflow.ID)
 	} else if status == "rejected" {
-		workflow.Reject()
-		
-		// Save workflow
-		if err := s.workflowRepo.Save(ctx, workflow); err != nil {
-			return err
-		}
-	} else {
-		return fmt.Errorf("invalid status: %s", status)
+		return s.RejectWorkflow(ctx, workflow.ID)
 	}
 	
 	return nil
 }
 
-// GetWorkflowStats gets workflow statistics
+// GetWorkflowStats gets workflow statistics by status
 func (s *WorkflowService) GetWorkflowStats(ctx context.Context) (map[string]int64, error) {
 	return s.workflowRepo.GetWorkflowStats(ctx)
 }
 
-// GetWorkflowTypeStats gets workflow type statistics
+// GetWorkflowTypeStats gets workflow statistics by type
 func (s *WorkflowService) GetWorkflowTypeStats(ctx context.Context) (map[string]int64, error) {
 	return s.workflowRepo.GetWorkflowTypeStats(ctx)
 }
 
-// GetAssetWorkflowHistory gets workflow history for an asset
+// GetAssetWorkflowHistory gets workflow history for a specific asset
 func (s *WorkflowService) GetAssetWorkflowHistory(ctx context.Context, assetID string) ([]*model.Workflow, error) {
 	return s.workflowRepo.FindByAssetID(ctx, assetID)
 }

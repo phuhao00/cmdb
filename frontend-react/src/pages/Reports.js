@@ -84,6 +84,34 @@ const translations = {
 const Reports = ({ language }) => {
   const t = (key) => translations[language][key] || translations['en'][key];
 
+  const downloadReport = async (reportType) => {
+    try {
+      // 显示下载提示
+      alert('正在生成报告，请稍候...');
+      
+      // 调用API获取报告 - 修复API URL
+      const response = await fetch(`http://localhost:8081/api/v1/reports/${reportType}`);
+      
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${reportType}-report-${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        alert(`${reportType} 报告下载成功！`);
+      } else {
+        throw new Error('报告生成失败');
+      }
+    } catch (error) {
+      console.error('Error downloading report:', error);
+      alert('下载报告失败，请稍后重试');
+    }
+  };
+
   return (
     <ReportsSection>
       <div className="container">
@@ -99,7 +127,7 @@ const Reports = ({ language }) => {
             <CardDescription>
               Detailed inventory of all assets
             </CardDescription>
-            <Button>
+            <Button onClick={() => downloadReport('inventory')}>
               {t('download')}
             </Button>
           </ReportCard>
@@ -111,7 +139,7 @@ const Reports = ({ language }) => {
             <CardDescription>
               Asset lifecycle and age tracking
             </CardDescription>
-            <Button>
+            <Button onClick={() => downloadReport('lifecycle')}>
               {t('download')}
             </Button>
           </ReportCard>
@@ -123,7 +151,7 @@ const Reports = ({ language }) => {
             <CardDescription>
               Compliance verification report
             </CardDescription>
-            <Button>
+            <Button onClick={() => downloadReport('compliance')}>
               {t('download')}
             </Button>
           </ReportCard>

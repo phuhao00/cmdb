@@ -147,7 +147,30 @@ const translations = {
     assetTypeDistribution: 'Asset Type Distribution',
     workflowStatus: 'Workflow Status',
     workflows: 'Workflows',
-    costDistributionByAssetType: 'Cost Distribution by Asset Type'
+    costDistributionByAssetType: 'Cost Distribution by Asset Type',
+    // Asset status labels
+    online: 'Online',
+    offline: 'Offline',
+    maintenance: 'Maintenance',
+    decommissioned: 'Decommissioned',
+    // Asset type labels
+    server: 'Server',
+    network: 'Network',
+    storage: 'Storage',
+    workstation: 'Workstation',
+    // Workflow status labels
+    pending: 'Pending',
+    approved: 'Approved',
+    rejected: 'Rejected',
+    // Additional common labels
+    unknown: 'Unknown',
+    active: 'Active',
+    inactive: 'Inactive',
+    laptop: 'Laptop',
+    desktop: 'Desktop',
+    router: 'Router',
+    switch: 'Switch',
+    firewall: 'Firewall'
   },
   zh: {
     dashboardTitle: 'CMDB 仪表板',
@@ -164,12 +187,85 @@ const translations = {
     assetTypeDistribution: '资产类型分布',
     workflowStatus: '工作流状态',
     workflows: '工作流',
-    costDistributionByAssetType: '按资产类型成本分布'
+    costDistributionByAssetType: '按资产类型成本分布',
+    // Asset status labels
+    online: '在线',
+    offline: '离线',
+    maintenance: '维护中',
+    decommissioned: '已报废',
+    // Asset type labels
+    server: '服务器',
+    network: '网络设备',
+    storage: '存储设备',
+    workstation: '工作站',
+    // Workflow status labels
+    pending: '待处理',
+    approved: '已批准',
+    rejected: '已拒绝',
+    // Additional common labels
+    unknown: '未知',
+    active: '活跃',
+    inactive: '非活跃',
+    laptop: '笔记本电脑',
+    desktop: '台式机',
+    router: '路由器',
+    switch: '交换机',
+    firewall: '防火墙'
   }
 };
 
 const Dashboard = ({ language, stats }) => {
   const t = (key) => translations[language][key] || translations['en'][key];
+  
+  // 翻译映射函数，处理API返回的数据
+  const getTranslatedLabel = (label) => {
+    // 处理空值
+    if (!label || label === undefined || label === null) {
+      return t('unknown');
+    }
+    
+    // 转换为字符串并清理
+    const cleanLabel = String(label).toLowerCase().trim();
+    
+    // 尝试直接翻译
+    const directTranslation = t(cleanLabel);
+    if (directTranslation && directTranslation !== cleanLabel) {
+      return directTranslation;
+    }
+    
+    // 如果没有找到，尝试一些常见的映射
+    const labelMappings = {
+      'servers': 'server',
+      'networks': 'network', 
+      'storages': 'storage',
+      'workstations': 'workstation',
+      'laptops': 'laptop',
+      'desktops': 'desktop',
+      'routers': 'router',
+      'switches': 'switch',
+      'firewalls': 'firewall',
+      'active': 'online',
+      'inactive': 'offline',
+      'under_maintenance': 'maintenance',
+      'retired': 'decommissioned',
+      'in_progress': 'pending',
+      'completed': 'approved',
+      'canceled': 'rejected',
+      'cancelled': 'rejected'
+    };
+    
+    const mappedKey = labelMappings[cleanLabel];
+    if (mappedKey) {
+      const mappedTranslation = t(mappedKey);
+      if (mappedTranslation && mappedTranslation !== mappedKey) {
+        return mappedTranslation;
+      }
+    }
+    
+    // 如果都没有找到，返回格式化的原始标签（首字母大写）
+    return label.charAt(0).toUpperCase() + label.slice(1).toLowerCase();
+  };
+
   const [assetTypes, setAssetTypes] = useState([]);
   const [workflowStats, setWorkflowStats] = useState({});
   const [assetCosts, setAssetCosts] = useState({});
@@ -211,7 +307,7 @@ const Dashboard = ({ language, stats }) => {
   };
 
   // Asset type chart data
-  const assetTypeLabels = Array.isArray(assetTypes) ? assetTypes.map(type => type.type || type._id) : [];
+  const assetTypeLabels = Array.isArray(assetTypes) ? assetTypes.map(type => getTranslatedLabel(type.type || type._id || 'unknown')) : [];
   const assetTypeData = Array.isArray(assetTypes) ? assetTypes.map(type => type.count) : [];
 
   const assetTypeChartData = {
@@ -235,7 +331,7 @@ const Dashboard = ({ language, stats }) => {
   const workflowStatusData = Object.values(workflowStats);
 
   const workflowStatusChartData = {
-    labels: workflowStatusLabels.map(label => t(label)),
+    labels: workflowStatusLabels.map(label => getTranslatedLabel(label)),
     datasets: [
       {
         label: t('workflows'),

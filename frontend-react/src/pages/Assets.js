@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { FaEye, FaEdit, FaPowerOff, FaTrash, FaPlus } from 'react-icons/fa';
-import { fetchAssets, deleteAsset } from '../services/api';
+import { FaEye, FaEdit, FaPowerOff, FaTrash, FaPlus, FaTimes } from 'react-icons/fa';
+import { fetchAssets, deleteAsset, createAsset } from '../services/api';
 
 const AssetsSection = styled.section`
   padding: 80px 0;
@@ -159,6 +159,131 @@ const ActionButton = styled.button`
   }
 `;
 
+const Modal = styled.div`
+  display: ${props => props.show ? 'flex' : 'none'};
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.5);
+  align-items: center;
+  justify-content: center;
+`;
+
+const ModalContent = styled.div`
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  position: relative;
+  max-height: 90vh;
+  overflow-y: auto;
+`;
+
+const CloseButton = styled.button`
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #666;
+  
+  &:hover {
+    color: #000;
+  }
+`;
+
+const FormGroup = styled.div`
+  margin-bottom: 1.5rem;
+`;
+
+const Label = styled.label`
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #2c3e50;
+`;
+
+const Input = styled.input`
+  width: 100%;
+  padding: 0.8rem;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 1rem;
+  
+  &:focus {
+    outline: none;
+    border-color: #3498db;
+  }
+`;
+
+const Select = styled.select`
+  width: 100%;
+  padding: 0.8rem;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 1rem;
+  
+  &:focus {
+    outline: none;
+    border-color: #3498db;
+  }
+`;
+
+const TextArea = styled.textarea`
+  width: 100%;
+  padding: 0.8rem;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 1rem;
+  resize: vertical;
+  min-height: 80px;
+  
+  &:focus {
+    outline: none;
+    border-color: #3498db;
+  }
+`;
+
+const SubmitButton = styled.button`
+  background: #3498db;
+  color: white;
+  padding: 0.8rem 1.5rem;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 600;
+  margin-right: 1rem;
+  
+  &:hover {
+    background: #2980b9;
+  }
+  
+  &:disabled {
+    background: #bdc3c7;
+    cursor: not-allowed;
+  }
+`;
+
+const CancelButton = styled.button`
+  background: #95a5a6;
+  color: white;
+  padding: 0.8rem 1.5rem;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 600;
+  
+  &:hover {
+    background: #7f8c8d;
+  }
+`;
+
 const translations = {
   en: {
     assetsTitle: 'Asset Management',
@@ -169,6 +294,8 @@ const translations = {
     assetLocation: 'Location',
     assetDescription: 'Description',
     searchAssets: 'Search assets...',
+    allStatuses: 'All Statuses',
+    allTypes: 'All Types',
     server: 'Server',
     network: 'Network',
     storage: 'Storage',
@@ -176,7 +303,18 @@ const translations = {
     online: 'Online',
     offline: 'Offline',
     maintenance: 'Maintenance',
-    decommissioned: 'Decommissioned'
+    decommissioned: 'Decommissioned',
+    submit: 'Submit',
+    cancel: 'Cancel',
+    required: 'This field is required',
+    assetNamePlaceholder: 'Enter asset name',
+    assetLocationPlaceholder: 'Enter asset location',
+    assetDescriptionPlaceholder: 'Enter asset description (optional)',
+    selectType: 'Select asset type',
+    selectStatus: 'Select asset status',
+    assetCreatedSuccess: 'Asset created successfully!',
+    assetCreatedError: 'Failed to create asset. Please try again.',
+    deleteConfirm: 'Are you sure you want to delete this asset?'
   },
   zh: {
     assetsTitle: '资产管理',
@@ -187,6 +325,8 @@ const translations = {
     assetLocation: '位置',
     assetDescription: '描述',
     searchAssets: '搜索资产...',
+    allStatuses: '所有状态',
+    allTypes: '所有类型',
     server: '服务器',
     network: '网络设备',
     storage: '存储设备',
@@ -194,7 +334,18 @@ const translations = {
     online: '在线',
     offline: '离线',
     maintenance: '维护中',
-    decommissioned: '已报废'
+    decommissioned: '已报废',
+    submit: '提交',
+    cancel: '取消',
+    required: '此字段为必填项',
+    assetNamePlaceholder: '请输入资产名称',
+    assetLocationPlaceholder: '请输入资产位置',
+    assetDescriptionPlaceholder: '请输入资产描述（可选）',
+    selectType: '选择资产类型',
+    selectStatus: '选择资产状态',
+    assetCreatedSuccess: '资产创建成功！',
+    assetCreatedError: '资产创建失败，请重试。',
+    deleteConfirm: '您确定要删除此资产吗？'
   }
 };
 
@@ -205,6 +356,15 @@ const Assets = ({ language }) => {
   const [statusFilter, setStatusFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newAsset, setNewAsset] = useState({
+    name: '',
+    type: '',
+    status: '',
+    location: '',
+    description: ''
+  });
+  const [addAssetError, setAddAssetError] = useState(null);
 
   useEffect(() => {
     loadAssets();
@@ -247,7 +407,7 @@ const Assets = ({ language }) => {
   };
 
   const handleDeleteAsset = async (id) => {
-    if (window.confirm('Are you sure you want to delete this asset?')) {
+    if (window.confirm(t('deleteConfirm'))) {
       try {
         await deleteAsset(id);
         loadAssets(); // Reload assets after deletion
@@ -255,6 +415,43 @@ const Assets = ({ language }) => {
         console.error('Failed to delete asset:', error);
       }
     }
+  };
+
+     const handleAddAsset = async () => {
+     if (!newAsset.name || !newAsset.type || !newAsset.status || !newAsset.location) {
+       setAddAssetError(t('required'));
+       return;
+     }
+
+     try {
+       await createAsset(newAsset);
+       alert(t('assetCreatedSuccess'));
+       setShowAddModal(false);
+       setNewAsset({
+         name: '',
+         type: '',
+         status: '',
+         location: '',
+         description: ''
+       });
+       setAddAssetError(null);
+       loadAssets(); // Reload assets after creation
+     } catch (error) {
+       setAddAssetError(t('assetCreatedError'));
+       console.error('Failed to create asset:', error);
+     }
+       };
+
+  const handleCloseModal = () => {
+    setShowAddModal(false);
+    setNewAsset({
+      name: '',
+      type: '',
+      status: '',
+      location: '',
+      description: ''
+    });
+    setAddAssetError(null);
   };
 
   const capitalizeFirst = (str) => {
@@ -267,7 +464,7 @@ const Assets = ({ language }) => {
       <div className="container">
         <SectionHeader>
           <Title>{t('assetsTitle')}</Title>
-          <Button>
+          <Button onClick={() => setShowAddModal(true)}>
             <FaPlus /> {t('addAsset')}
           </Button>
         </SectionHeader>
@@ -349,6 +546,81 @@ const Assets = ({ language }) => {
             </tbody>
           </AssetsTable>
         </TableContainer>
+
+                 <Modal show={showAddModal}>
+           <ModalContent>
+                           <CloseButton onClick={handleCloseModal}>
+                <FaTimes />
+              </CloseButton>
+             <h2>{t('addAsset')}</h2>
+             {addAssetError && <p style={{ color: 'red' }}>{addAssetError}</p>}
+             <FormGroup>
+              <Label htmlFor="add-asset-name">{t('assetName')}</Label>
+              <Input
+                type="text"
+                id="add-asset-name"
+                placeholder={t('assetNamePlaceholder')}
+                value={newAsset.name}
+                onChange={(e) => setNewAsset({ ...newAsset, name: e.target.value })}
+                required
+              />
+            </FormGroup>
+            <FormGroup>
+              <Label htmlFor="add-asset-type">{t('assetType')}</Label>
+              <Select
+                id="add-asset-type"
+                value={newAsset.type}
+                onChange={(e) => setNewAsset({ ...newAsset, type: e.target.value })}
+                required
+              >
+                <option value="">{t('selectType')}</option>
+                <option value="server">{t('server')}</option>
+                <option value="network">{t('network')}</option>
+                <option value="storage">{t('storage')}</option>
+                <option value="workstation">{t('workstation')}</option>
+              </Select>
+            </FormGroup>
+            <FormGroup>
+              <Label htmlFor="add-asset-status">{t('assetStatus')}</Label>
+              <Select
+                id="add-asset-status"
+                value={newAsset.status}
+                onChange={(e) => setNewAsset({ ...newAsset, status: e.target.value })}
+                required
+              >
+                <option value="">{t('selectStatus')}</option>
+                <option value="online">{t('online')}</option>
+                <option value="offline">{t('offline')}</option>
+                <option value="maintenance">{t('maintenance')}</option>
+                <option value="decommissioned">{t('decommissioned')}</option>
+              </Select>
+            </FormGroup>
+            <FormGroup>
+              <Label htmlFor="add-asset-location">{t('assetLocation')}</Label>
+              <Input
+                type="text"
+                id="add-asset-location"
+                placeholder={t('assetLocationPlaceholder')}
+                value={newAsset.location}
+                onChange={(e) => setNewAsset({ ...newAsset, location: e.target.value })}
+                required
+              />
+            </FormGroup>
+            <FormGroup>
+              <Label htmlFor="add-asset-description">{t('assetDescription')}</Label>
+              <TextArea
+                id="add-asset-description"
+                placeholder={t('assetDescriptionPlaceholder')}
+                value={newAsset.description}
+                onChange={(e) => setNewAsset({ ...newAsset, description: e.target.value })}
+              />
+            </FormGroup>
+                                                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <CancelButton onClick={handleCloseModal}>{t('cancel')}</CancelButton>
+               <SubmitButton onClick={handleAddAsset} disabled={!newAsset.name || !newAsset.type || !newAsset.status || !newAsset.location}>{t('submit')}</SubmitButton>
+             </div>
+           </ModalContent>
+         </Modal>
       </div>
     </AssetsSection>
   );

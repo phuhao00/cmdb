@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // API Configuration
-const API_BASE_URL = `${window.location.protocol}//${window.location.hostname}${window.location.port ? ':3000' : ''}/api/v1`;
+const API_BASE_URL = `${window.location.protocol}//${window.location.hostname}:8081/api/v1`;
 
 // Create axios instance
 const apiClient = axios.create({
@@ -55,12 +55,8 @@ export const updateAssetCosts = (id, costsData) => {
 };
 
 // Workflows API
-export const fetchWorkflows = (params = {}) => {
-  return apiClient.get('/workflows', { params });
-};
-
-export const fetchWorkflowById = (id) => {
-  return apiClient.get(`/workflows/${id}`);
+export const fetchWorkflows = () => {
+  return apiClient.get('/workflows');
 };
 
 export const createWorkflow = (workflowData) => {
