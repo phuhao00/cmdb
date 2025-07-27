@@ -28,6 +28,8 @@ type AssetCreateDTO struct {
 	Type        string `json:"type" binding:"required"`
 	Location    string `json:"location" binding:"required"`
 	Description string `json:"description"`
+	Requester   string `json:"requester,omitempty"`
+	RequesterID string `json:"requesterId,omitempty"`
 }
 
 // AssetUpdateDTO represents the data for updating an asset
@@ -35,6 +37,8 @@ type AssetUpdateDTO struct {
 	Name        string `json:"name"`
 	Location    string `json:"location"`
 	Description string `json:"description"`
+	Requester   string `json:"requester,omitempty"`
+	RequesterID string `json:"requesterId,omitempty"`
 }
 
 // AssetUpdateCostsDTO represents the data for updating asset costs
@@ -73,13 +77,15 @@ type AssetFilterDTO struct {
 
 // AssetApplication provides application services for assets
 type AssetApplication struct {
-	assetService *service.AssetService
+	assetService    *service.AssetService
+	workflowService *service.WorkflowService
 }
 
 // NewAssetApplication creates a new asset application service
-func NewAssetApplication(assetService *service.AssetService) *AssetApplication {
+func NewAssetApplication(assetService *service.AssetService, workflowService *service.WorkflowService) *AssetApplication {
 	return &AssetApplication{
-		assetService: assetService,
+		assetService:    assetService,
+		workflowService: workflowService,
 	}
 }
 
@@ -89,12 +95,12 @@ func (a *AssetApplication) GetAssetByID(ctx context.Context, id string) (*AssetD
 	if err != nil {
 		return nil, err
 	}
-	
+
 	asset, err := a.assetService.GetAssetByID(ctx, objectID)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return mapAssetToDTO(asset), nil
 }
 
@@ -102,38 +108,38 @@ func (a *AssetApplication) GetAssetByID(ctx context.Context, id string) (*AssetD
 func (a *AssetApplication) GetAssets(ctx context.Context, filter AssetFilterDTO) ([]*AssetDTO, error) {
 	// Convert filter to map
 	filterMap := make(map[string]interface{})
-	
+
 	if filter.Status != "" {
 		filterMap["status"] = filter.Status
 	}
-	
+
 	if filter.Type != "" {
 		filterMap["type"] = filter.Type
 	}
-	
+
 	if filter.Search != "" {
 		filterMap["search"] = filter.Search
 	}
-	
+
 	if !filter.FromDate.IsZero() {
 		filterMap["fromDate"] = filter.FromDate
 	}
-	
+
 	if !filter.ToDate.IsZero() {
 		filterMap["toDate"] = filter.ToDate
 	}
-	
+
 	assets, err := a.assetService.GetAssets(ctx, filterMap)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Map assets to DTOs
 	assetDTOs := make([]*AssetDTO, len(assets))
 	for i, asset := range assets {
 		assetDTOs[i] = mapAssetToDTO(asset)
 	}
-	
+
 	return assetDTOs, nil
 }
 
@@ -143,7 +149,7 @@ func (a *AssetApplication) CreateAsset(ctx context.Context, createDTO AssetCreat
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return mapAssetToDTO(asset), nil
 }
 
@@ -153,22 +159,59 @@ func (a *AssetApplication) UpdateAsset(ctx context.Context, id string, updateDTO
 	if err != nil {
 		return nil, err
 	}
-	
+
 	asset, err := a.assetService.UpdateAsset(ctx, objectID, updateDTO.Name, updateDTO.Location, updateDTO.Description)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return mapAssetToDTO(asset), nil
 }
 
-// RequestDecommission initiates a decommission workflow for an asset
-func (a *AssetApplication) RequestDecommission(ctx context.Context, id string, requester string, reason string) error {
+// CreateAssetWithApproval creates a new asset with approval workflow
+func (a *AssetApplication) CreateAssetWithApproval(ctx context.Context, createDTO AssetCreateDTO) (*AssetDTO, error) {
+	// Create workflow for asset creation
+	asset, workflow, err := a.assetService.CreateAssetWithApproval(ctx, createDTO.Name, createDTO.Type, createDTO.Location, createDTO.Description, createDTO.Requester, createDTO.RequesterID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Submit to Feishu (optional)
+	if a.workflowService != nil {
+		_, _ = a.workflowService.SubmitToFeishu(ctx, workflow)
+	}
+
+	return mapAssetToDTO(asset), nil
+}
+
+// UpdateAssetWithApproval updates an asset with approval workflow
+func (a *AssetApplication) UpdateAssetWithApproval(ctx context.Context, id string, updateDTO AssetUpdateDTO) error {
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		return err
 	}
-	
+
+	// Create workflow for asset update
+	workflow, err := a.assetService.CreateAssetUpdateWorkflow(ctx, objectID, updateDTO.Name, updateDTO.Location, updateDTO.Description, updateDTO.Requester, updateDTO.RequesterID)
+	if err != nil {
+		return err
+	}
+
+	// Submit to Feishu (optional)
+	if a.workflowService != nil {
+		_, _ = a.workflowService.SubmitToFeishu(ctx, workflow)
+	}
+
+	return nil
+}
+
+// RequestDecommission initiates a decommission workflow for an asset
+func (a *AssetApplication) RequestDecommission(ctx context.Context, id string, requester string, requesterID string, reason string) error {
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return err
+	}
+
 	_, err = a.assetService.RequestDecommission(ctx, objectID, requester, reason)
 	return err
 }
@@ -179,7 +222,7 @@ func (a *AssetApplication) RequestStatusChange(ctx context.Context, id string, r
 	if err != nil {
 		return err
 	}
-	
+
 	_, err = a.assetService.RequestStatusChange(ctx, objectID, requester, reason)
 	return err
 }
@@ -190,7 +233,7 @@ func (a *AssetApplication) RequestMaintenance(ctx context.Context, id string, re
 	if err != nil {
 		return err
 	}
-	
+
 	_, err = a.assetService.RequestMaintenance(ctx, objectID, requester, reason)
 	return err
 }
@@ -198,11 +241,11 @@ func (a *AssetApplication) RequestMaintenance(ctx context.Context, id string, re
 // BulkCreateAssets creates multiple assets
 func (a *AssetApplication) BulkCreateAssets(ctx context.Context, createDTOs []AssetCreateDTO) (int, error) {
 	assets := make([]model.Asset, len(createDTOs))
-	
+
 	for i, dto := range createDTOs {
 		assets[i] = *model.NewAsset(dto.Name, model.AssetType(dto.Type), dto.Location, dto.Description)
 	}
-	
+
 	return a.assetService.BulkCreateAssets(ctx, assets)
 }
 
@@ -227,14 +270,14 @@ func (a *AssetApplication) GetAssetCosts(ctx context.Context) (*AssetCostsDTO, e
 	if err != nil {
 		return nil, err
 	}
-	
+
 	costs := &AssetCostsDTO{}
-	
+
 	for _, asset := range assets {
 		// Add to total investment and annual cost
 		costs.TotalInvestment += asset.PurchasePrice
 		costs.AnnualCost += asset.AnnualCost
-		
+
 		// Add to category-specific costs
 		switch asset.Type {
 		case model.ServerType:
@@ -247,7 +290,7 @@ func (a *AssetApplication) GetAssetCosts(ctx context.Context) (*AssetCostsDTO, e
 			costs.Workstations += asset.AnnualCost
 		}
 	}
-	
+
 	return costs, nil
 }
 
@@ -258,12 +301,12 @@ func (a *AssetApplication) GetCriticalAssets(ctx context.Context) ([]*CriticalAs
 		"status": model.OnlineStatus,
 		"type":   model.ServerType,
 	}
-	
+
 	assets, err := a.assetService.GetAssets(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	criticalAssets := make([]*CriticalAssetDTO, len(assets))
 	for i, asset := range assets {
 		criticalAssets[i] = &CriticalAssetDTO{
@@ -273,7 +316,7 @@ func (a *AssetApplication) GetCriticalAssets(ctx context.Context) ([]*CriticalAs
 			Status: string(asset.Status),
 		}
 	}
-	
+
 	return criticalAssets, nil
 }
 
@@ -283,15 +326,15 @@ func (a *AssetApplication) UpdateAssetCosts(ctx context.Context, id string, cost
 	if err != nil {
 		return err
 	}
-	
+
 	asset, err := a.assetService.GetAssetByID(ctx, objectID)
 	if err != nil {
 		return err
 	}
-	
+
 	// Update the asset costs
 	asset.UpdateCosts(costsDTO.PurchasePrice, costsDTO.AnnualCost, costsDTO.Currency)
-	
+
 	// Save the updated asset by calling the service method with correct parameters
 	_, err = a.assetService.UpdateAsset(ctx, asset.ID, asset.Name, asset.Location, asset.Description)
 	return err

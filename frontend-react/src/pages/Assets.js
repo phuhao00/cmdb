@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { FaEye, FaEdit, FaPowerOff, FaTrash, FaPlus, FaTimes, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
-import { fetchAssets, deleteAsset, createAsset } from '../services/api';
+import { fetchAssets, deleteAsset, createAsset, fetchAssetById, updateAsset } from '../services/api';
 
 const AssetsSection = styled.section`
   padding: 80px 0;
@@ -319,11 +319,18 @@ const DesktopActionButton = styled.button`
   font-weight: 500;
   position: relative;
 
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
   &.view {
     background: #3498db;
     color: white;
     
-    &:hover {
+    &:hover:not(:disabled) {
       background: #2980b9;
     }
   }
@@ -332,7 +339,7 @@ const DesktopActionButton = styled.button`
     background: #f39c12;
     color: white;
     
-    &:hover {
+    &:hover:not(:disabled) {
       background: #e67e22;
     }
   }
@@ -341,7 +348,7 @@ const DesktopActionButton = styled.button`
     background: #2ecc71;
     color: white;
     
-    &:hover {
+    &:hover:not(:disabled) {
       background: #27ae60;
     }
   }
@@ -350,18 +357,18 @@ const DesktopActionButton = styled.button`
     background: #e74c3c;
     color: white;
     
-    &:hover {
+    &:hover:not(:disabled) {
       background: #c0392b;
     }
   }
 
-  &:hover {
+  &:hover:not(:disabled) {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
   }
 
   /* Tooltip 效果 */
-  &:hover::after {
+  &:hover:not(:disabled)::after {
     content: attr(data-tooltip);
     position: absolute;
     bottom: 110%;
@@ -378,7 +385,7 @@ const DesktopActionButton = styled.button`
     transition: opacity 0.3s ease;
   }
 
-  &:hover::before {
+  &:hover:not(:disabled)::before {
     content: '';
     position: absolute;
     bottom: 100%;
@@ -403,11 +410,18 @@ const MobileActionButton = styled.button`
   gap: 0.5rem;
   font-weight: 500;
 
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
   &.view {
     background: #3498db;
     color: white;
     
-    &:hover {
+    &:hover:not(:disabled) {
       background: #2980b9;
     }
   }
@@ -416,7 +430,7 @@ const MobileActionButton = styled.button`
     background: #f39c12;
     color: white;
     
-    &:hover {
+    &:hover:not(:disabled) {
       background: #e67e22;
     }
   }
@@ -425,7 +439,7 @@ const MobileActionButton = styled.button`
     background: #2ecc71;
     color: white;
     
-    &:hover {
+    &:hover:not(:disabled) {
       background: #27ae60;
     }
   }
@@ -434,12 +448,12 @@ const MobileActionButton = styled.button`
     background: #e74c3c;
     color: white;
     
-    &:hover {
+    &:hover:not(:disabled) {
       background: #c0392b;
     }
   }
 
-  &:hover {
+  &:hover:not(:disabled) {
     transform: translateY(-1px);
     box-shadow: 0 2px 8px rgba(0,0,0,0.15);
   }
@@ -795,6 +809,9 @@ const Assets = ({ language = 'zh' }) => {
   const [typeFilter, setTypeFilter] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedAsset, setSelectedAsset] = useState(null);
   const [newAsset, setNewAsset] = useState({
     name: '',
     type: '',
@@ -802,7 +819,16 @@ const Assets = ({ language = 'zh' }) => {
     location: '',
     description: ''
   });
+  const [editAsset, setEditAsset] = useState({
+    name: '',
+    type: '',
+    status: '',
+    location: '',
+    description: ''
+  });
   const [addAssetError, setAddAssetError] = useState(null);
+  const [editAssetError, setEditAssetError] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
@@ -819,10 +845,13 @@ const Assets = ({ language = 'zh' }) => {
 
   const loadAssets = async () => {
     try {
+      setLoading(true);
       const response = await fetchAssets();
       setAssets(response.data);
     } catch (error) {
       console.error('Failed to load assets:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -891,13 +920,99 @@ const Assets = ({ language = 'zh' }) => {
     return pages;
   };
 
-  const handleDeleteAsset = async (id) => {
-    if (window.confirm(t('deleteConfirm'))) {
+  // 查看资产详情
+  const handleViewAsset = async (assetId) => {
+    try {
+      setLoading(true);
+      const response = await fetchAssetById(assetId);
+      setSelectedAsset(response.data);
+      setShowViewModal(true);
+    } catch (error) {
+      console.error('Failed to fetch asset details:', error);
+      alert('获取资产详情失败，请重试。');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 编辑资产
+  const handleEditAsset = async (assetId) => {
+    try {
+      setLoading(true);
+      const response = await fetchAssetById(assetId);
+      const asset = response.data;
+      setSelectedAsset(asset);
+      setEditAsset({
+        name: asset.name,
+        type: asset.type,
+        status: asset.status,
+        location: asset.location,
+        description: asset.description || ''
+      });
+      setShowEditModal(true);
+    } catch (error) {
+      console.error('Failed to fetch asset for editing:', error);
+      alert('获取资产信息失败，请重试。');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 保存编辑
+  const handleSaveEdit = async () => {
+    if (!editAsset.name || !editAsset.type || !editAsset.status || !editAsset.location) {
+      setEditAssetError('所有必填字段都需要填写');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await updateAsset(selectedAsset.id, editAsset);
+      alert('资产更新成功！');
+      setShowEditModal(false);
+      setEditAssetError(null);
+      loadAssets(); // 重新加载资产列表
+    } catch (error) {
+      console.error('Failed to update asset:', error);
+      setEditAssetError('资产更新失败，请重试。');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 切换资产状态（开关机）
+  const handleToggleStatus = async (asset) => {
+    const newStatus = asset.status === 'online' ? 'offline' : 'online';
+    const action = newStatus === 'online' ? '上线' : '下线';
+    
+    if (window.confirm(`确定要${action}资产"${asset.name}"吗？`)) {
       try {
-        await deleteAsset(id);
-        loadAssets(); // Reload assets after deletion
+        setLoading(true);
+        await updateAsset(asset.id, { ...asset, status: newStatus });
+        alert(`资产已成功${action}！`);
+        loadAssets(); // 重新加载资产列表
+      } catch (error) {
+        console.error('Failed to toggle asset status:', error);
+        alert(`${action}失败，请重试。`);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  // 删除资产
+  const handleDeleteAsset = async (asset) => {
+    if (window.confirm(`确定要删除资产"${asset.name}"吗？\n\n此操作将创建一个停用工作流，需要审批后才能完成删除。`)) {
+      try {
+        setLoading(true);
+        await deleteAsset(asset.id);
+        alert('删除请求已提交，将创建停用工作流进行审批。');
+        loadAssets(); // 重新加载资产列表
       } catch (error) {
         console.error('Failed to delete asset:', error);
+        alert('删除失败，请重试。');
+      } finally {
+        setLoading(false);
       }
     }
   };
@@ -909,6 +1024,7 @@ const Assets = ({ language = 'zh' }) => {
     }
 
     try {
+      setLoading(true);
       await createAsset(newAsset);
       alert(t('assetCreatedSuccess'));
       setShowAddModal(false);
@@ -924,11 +1040,16 @@ const Assets = ({ language = 'zh' }) => {
     } catch (error) {
       setAddAssetError(t('assetCreatedError'));
       console.error('Failed to create asset:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleCloseModal = () => {
     setShowAddModal(false);
+    setShowViewModal(false);
+    setShowEditModal(false);
+    setSelectedAsset(null);
     setNewAsset({
       name: '',
       type: '',
@@ -936,7 +1057,15 @@ const Assets = ({ language = 'zh' }) => {
       location: '',
       description: ''
     });
+    setEditAsset({
+      name: '',
+      type: '',
+      status: '',
+      location: '',
+      description: ''
+    });
     setAddAssetError(null);
+    setEditAssetError(null);
   };
 
   return (
@@ -944,7 +1073,7 @@ const Assets = ({ language = 'zh' }) => {
       <Container>
         <SectionHeader>
           <Title>{t('assetsTitle')}</Title>
-          <Button onClick={() => setShowAddModal(true)}>
+          <Button onClick={() => setShowAddModal(true)} disabled={loading}>
             <FaPlus /> {t('addAsset')}
           </Button>
         </SectionHeader>
@@ -953,6 +1082,7 @@ const Assets = ({ language = 'zh' }) => {
           <FilterSelect 
             value={statusFilter} 
             onChange={(e) => setStatusFilter(e.target.value)}
+            disabled={loading}
           >
             <option value="">{t('allStatuses')}</option>
             <option value="online">{t('online')}</option>
@@ -964,6 +1094,7 @@ const Assets = ({ language = 'zh' }) => {
           <FilterSelect 
             value={typeFilter} 
             onChange={(e) => setTypeFilter(e.target.value)}
+            disabled={loading}
           >
             <option value="">{t('allTypes')}</option>
             <option value="server">{t('server')}</option>
@@ -977,15 +1108,22 @@ const Assets = ({ language = 'zh' }) => {
             placeholder={t('searchAssets')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            disabled={loading}
           />
         </Filters>
         
-        {currentAssets.length === 0 ? (
+        {loading && (
+          <div style={{ textAlign: 'center', padding: '2rem', color: '#7f8c8d' }}>
+            加载中...
+          </div>
+        )}
+        
+        {!loading && currentAssets.length === 0 ? (
           <NoDataMessage>
             <h3>{t('noAssetsFound')}</h3>
             <p>{t('noAssetsMessage')}</p>
           </NoDataMessage>
-        ) : (
+        ) : !loading && (
           <>
             {/* 桌面端表格视图 */}
             <DesktopTableContainer>
@@ -1019,25 +1157,32 @@ const Assets = ({ language = 'zh' }) => {
                           <DesktopActionButton 
                             className="view" 
                             data-tooltip={t('view')}
+                            onClick={() => handleViewAsset(asset.id)}
+                            disabled={loading}
                           >
                             <FaEye />
                           </DesktopActionButton>
                           <DesktopActionButton 
                             className="edit" 
                             data-tooltip={t('edit')}
+                            onClick={() => handleEditAsset(asset.id)}
+                            disabled={loading}
                           >
                             <FaEdit />
                           </DesktopActionButton>
                           <DesktopActionButton 
                             className="status" 
-                            data-tooltip={t('power')}
+                            data-tooltip={asset.status === 'online' ? '下线' : '上线'}
+                            onClick={() => handleToggleStatus(asset)}
+                            disabled={loading || asset.status === 'maintenance' || asset.status === 'decommissioned'}
                           >
                             <FaPowerOff />
                           </DesktopActionButton>
                           <DesktopActionButton 
                             className="delete" 
                             data-tooltip={t('delete')}
-                            onClick={() => handleDeleteAsset(asset.id || asset._id)}
+                            onClick={() => handleDeleteAsset(asset)}
+                            disabled={loading}
                           >
                             <FaTrash />
                           </DesktopActionButton>
@@ -1078,18 +1223,31 @@ const Assets = ({ language = 'zh' }) => {
                   </CardInfo>
                   
                   <MobileActionButtons>
-                    <MobileActionButton className="view">
+                    <MobileActionButton 
+                      className="view"
+                      onClick={() => handleViewAsset(asset.id)}
+                      disabled={loading}
+                    >
                       <FaEye /> {t('view')}
                     </MobileActionButton>
-                    <MobileActionButton className="edit">
+                    <MobileActionButton 
+                      className="edit"
+                      onClick={() => handleEditAsset(asset.id)}
+                      disabled={loading}
+                    >
                       <FaEdit /> {t('edit')}
                     </MobileActionButton>
-                    <MobileActionButton className="status">
-                      <FaPowerOff /> {t('power')}
+                    <MobileActionButton 
+                      className="status"
+                      onClick={() => handleToggleStatus(asset)}
+                      disabled={loading || asset.status === 'maintenance' || asset.status === 'decommissioned'}
+                    >
+                      <FaPowerOff /> {asset.status === 'online' ? '下线' : '上线'}
                     </MobileActionButton>
                     <MobileActionButton 
                       className="delete"
-                      onClick={() => handleDeleteAsset(asset.id || asset._id)}
+                      onClick={() => handleDeleteAsset(asset)}
+                      disabled={loading}
                     >
                       <FaTrash /> {t('delete')}
                     </MobileActionButton>
@@ -1110,7 +1268,7 @@ const Assets = ({ language = 'zh' }) => {
                     <span style={{ fontSize: '0.9rem', color: '#7f8c8d' }}>
                       {t('itemsPerPage')}
                     </span>
-                    <PageSizeSelect value={pageSize} onChange={handlePageSizeChange}>
+                    <PageSizeSelect value={pageSize} onChange={handlePageSizeChange} disabled={loading}>
                       <option value={5}>5</option>
                       <option value={10}>10</option>
                       <option value={20}>20</option>
@@ -1121,7 +1279,7 @@ const Assets = ({ language = 'zh' }) => {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <PageButton
                       onClick={() => handlePageChange(currentPage - 1)}
-                      disabled={currentPage === 1}
+                      disabled={currentPage === 1 || loading}
                     >
                       <FaChevronLeft />
                     </PageButton>
@@ -1131,6 +1289,7 @@ const Assets = ({ language = 'zh' }) => {
                         key={page}
                         onClick={() => handlePageChange(page)}
                         className={currentPage === page ? 'active' : ''}
+                        disabled={loading}
                       >
                         {page}
                       </PageButton>
@@ -1138,7 +1297,7 @@ const Assets = ({ language = 'zh' }) => {
                     
                     <PageButton
                       onClick={() => handlePageChange(currentPage + 1)}
-                      disabled={currentPage === totalPages}
+                      disabled={currentPage === totalPages || loading}
                     >
                       <FaChevronRight />
                     </PageButton>
@@ -1149,6 +1308,7 @@ const Assets = ({ language = 'zh' }) => {
           </>
         )}
 
+        {/* 添加资产模态框 */}
         <Modal show={showAddModal}>
           <ModalContent>
             <CloseButton onClick={handleCloseModal}>
@@ -1175,6 +1335,7 @@ const Assets = ({ language = 'zh' }) => {
                 placeholder={t('assetNamePlaceholder')}
                 value={newAsset.name}
                 onChange={(e) => setNewAsset({ ...newAsset, name: e.target.value })}
+                disabled={loading}
                 required
               />
             </FormGroup>
@@ -1184,6 +1345,7 @@ const Assets = ({ language = 'zh' }) => {
                 id="add-asset-type"
                 value={newAsset.type}
                 onChange={(e) => setNewAsset({ ...newAsset, type: e.target.value })}
+                disabled={loading}
                 required
               >
                 <option value="">{t('selectType')}</option>
@@ -1199,6 +1361,7 @@ const Assets = ({ language = 'zh' }) => {
                 id="add-asset-status"
                 value={newAsset.status}
                 onChange={(e) => setNewAsset({ ...newAsset, status: e.target.value })}
+                disabled={loading}
                 required
               >
                 <option value="">{t('selectStatus')}</option>
@@ -1216,6 +1379,7 @@ const Assets = ({ language = 'zh' }) => {
                 placeholder={t('assetLocationPlaceholder')}
                 value={newAsset.location}
                 onChange={(e) => setNewAsset({ ...newAsset, location: e.target.value })}
+                disabled={loading}
                 required
               />
             </FormGroup>
@@ -1226,15 +1390,161 @@ const Assets = ({ language = 'zh' }) => {
                 placeholder={t('assetDescriptionPlaceholder')}
                 value={newAsset.description}
                 onChange={(e) => setNewAsset({ ...newAsset, description: e.target.value })}
+                disabled={loading}
               />
             </FormGroup>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem' }}>
-              <CancelButton onClick={handleCloseModal}>{t('cancel')}</CancelButton>
+              <CancelButton onClick={handleCloseModal} disabled={loading}>{t('cancel')}</CancelButton>
               <SubmitButton 
                 onClick={handleAddAsset} 
-                disabled={!newAsset.name || !newAsset.type || !newAsset.status || !newAsset.location}
+                disabled={loading || !newAsset.name || !newAsset.type || !newAsset.status || !newAsset.location}
               >
-                {t('submit')}
+                {loading ? '提交中...' : t('submit')}
+              </SubmitButton>
+            </div>
+          </ModalContent>
+        </Modal>
+
+        {/* 查看资产详情模态框 */}
+        <Modal show={showViewModal}>
+          <ModalContent>
+            <CloseButton onClick={handleCloseModal}>
+              <FaTimes />
+            </CloseButton>
+            <h2 style={{ margin: '0 0 2rem 0', color: '#2c3e50' }}>资产详情</h2>
+            {selectedAsset && (
+              <div>
+                <DetailGroup>
+                  <DetailLabel>资产ID</DetailLabel>
+                  <DetailValue>{selectedAsset.assetId || selectedAsset.id}</DetailValue>
+                </DetailGroup>
+                <DetailGroup>
+                  <DetailLabel>{t('assetName')}</DetailLabel>
+                  <DetailValue>{selectedAsset.name}</DetailValue>
+                </DetailGroup>
+                <DetailGroup>
+                  <DetailLabel>{t('assetType')}</DetailLabel>
+                  <DetailValue>{t(selectedAsset.type)}</DetailValue>
+                </DetailGroup>
+                <DetailGroup>
+                  <DetailLabel>{t('assetStatus')}</DetailLabel>
+                  <DetailValue>
+                    <StatusBadge className={selectedAsset.status}>
+                      {t(selectedAsset.status)}
+                    </StatusBadge>
+                  </DetailValue>
+                </DetailGroup>
+                <DetailGroup>
+                  <DetailLabel>{t('assetLocation')}</DetailLabel>
+                  <DetailValue>{selectedAsset.location}</DetailValue>
+                </DetailGroup>
+                <DetailGroup>
+                  <DetailLabel>{t('assetDescription')}</DetailLabel>
+                  <DetailValue>{selectedAsset.description || '无描述'}</DetailValue>
+                </DetailGroup>
+                <DetailGroup>
+                  <DetailLabel>创建时间</DetailLabel>
+                  <DetailValue>{new Date(selectedAsset.createdAt).toLocaleString('zh-CN')}</DetailValue>
+                </DetailGroup>
+                <DetailGroup>
+                  <DetailLabel>更新时间</DetailLabel>
+                  <DetailValue>{new Date(selectedAsset.updatedAt).toLocaleString('zh-CN')}</DetailValue>
+                </DetailGroup>
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '2rem' }}>
+              <CancelButton onClick={handleCloseModal}>关闭</CancelButton>
+            </div>
+          </ModalContent>
+        </Modal>
+
+        {/* 编辑资产模态框 */}
+        <Modal show={showEditModal}>
+          <ModalContent>
+            <CloseButton onClick={handleCloseModal}>
+              <FaTimes />
+            </CloseButton>
+            <h2 style={{ margin: '0 0 2rem 0', color: '#2c3e50' }}>编辑资产</h2>
+            {editAssetError && (
+              <div style={{ 
+                color: '#e74c3c', 
+                background: '#fdf2f2', 
+                padding: '1rem', 
+                borderRadius: '8px', 
+                marginBottom: '1.5rem',
+                border: '1px solid #f5c6cb'
+              }}>
+                {editAssetError}
+              </div>
+            )}
+            <FormGroup>
+              <Label htmlFor="edit-asset-name">{t('assetName')}</Label>
+              <Input
+                type="text"
+                id="edit-asset-name"
+                value={editAsset.name}
+                onChange={(e) => setEditAsset({ ...editAsset, name: e.target.value })}
+                disabled={loading}
+                required
+              />
+            </FormGroup>
+            <FormGroup>
+              <Label htmlFor="edit-asset-type">{t('assetType')}</Label>
+              <Select
+                id="edit-asset-type"
+                value={editAsset.type}
+                onChange={(e) => setEditAsset({ ...editAsset, type: e.target.value })}
+                disabled={loading}
+                required
+              >
+                <option value="server">{t('server')}</option>
+                <option value="network">{t('network')}</option>
+                <option value="storage">{t('storage')}</option>
+                <option value="workstation">{t('workstation')}</option>
+              </Select>
+            </FormGroup>
+            <FormGroup>
+              <Label htmlFor="edit-asset-status">{t('assetStatus')}</Label>
+              <Select
+                id="edit-asset-status"
+                value={editAsset.status}
+                onChange={(e) => setEditAsset({ ...editAsset, status: e.target.value })}
+                disabled={loading}
+                required
+              >
+                <option value="online">{t('online')}</option>
+                <option value="offline">{t('offline')}</option>
+                <option value="maintenance">{t('maintenance')}</option>
+                <option value="decommissioned">{t('decommissioned')}</option>
+              </Select>
+            </FormGroup>
+            <FormGroup>
+              <Label htmlFor="edit-asset-location">{t('assetLocation')}</Label>
+              <Input
+                type="text"
+                id="edit-asset-location"
+                value={editAsset.location}
+                onChange={(e) => setEditAsset({ ...editAsset, location: e.target.value })}
+                disabled={loading}
+                required
+              />
+            </FormGroup>
+            <FormGroup>
+              <Label htmlFor="edit-asset-description">{t('assetDescription')}</Label>
+              <TextArea
+                id="edit-asset-description"
+                value={editAsset.description}
+                onChange={(e) => setEditAsset({ ...editAsset, description: e.target.value })}
+                disabled={loading}
+              />
+            </FormGroup>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem' }}>
+              <CancelButton onClick={handleCloseModal} disabled={loading}>取消</CancelButton>
+              <SubmitButton 
+                onClick={handleSaveEdit} 
+                disabled={loading || !editAsset.name || !editAsset.type || !editAsset.status || !editAsset.location}
+              >
+                {loading ? '保存中...' : '保存'}
               </SubmitButton>
             </div>
           </ModalContent>
@@ -1243,5 +1553,31 @@ const Assets = ({ language = 'zh' }) => {
     </AssetsSection>
   );
 };
+
+// 添加详情显示样式组件
+const DetailGroup = styled.div`
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #eee;
+  
+  &:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+  }
+`;
+
+const DetailLabel = styled.label`
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 0.95rem;
+`;
+
+const DetailValue = styled.div`
+  color: #34495e;
+  font-size: 1rem;
+  line-height: 1.5;
+`;
 
 export default Assets; 

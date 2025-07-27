@@ -87,6 +87,13 @@ func (h *AssetHandler) GetAssetByID(c *gin.Context) {
 
 // CreateAsset handles POST /assets
 func (h *AssetHandler) CreateAsset(c *gin.Context) {
+	// Get user from context (set by auth middleware)
+	user, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+
 	var createDTO application.AssetCreateDTO
 	
 	if err := c.ShouldBindJSON(&createDTO); err != nil {
@@ -94,7 +101,11 @@ func (h *AssetHandler) CreateAsset(c *gin.Context) {
 		return
 	}
 	
-	asset, err := h.assetApp.CreateAsset(c.Request.Context(), createDTO)
+	// Add user context to DTO
+	createDTO.Requester = user.(*application.UserDTO).Username
+	createDTO.RequesterID = user.(*application.UserDTO).ID
+	
+	asset, err := h.assetApp.CreateAssetWithApproval(c.Request.Context(), createDTO)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -102,12 +113,19 @@ func (h *AssetHandler) CreateAsset(c *gin.Context) {
 	
 	c.JSON(http.StatusCreated, gin.H{
 		"asset":   asset,
-		"message": "Asset created and submitted for approval",
+		"message": "Asset creation submitted for approval",
 	})
 }
 
 // UpdateAsset handles PUT /assets/:id
 func (h *AssetHandler) UpdateAsset(c *gin.Context) {
+	// Get user from context (set by auth middleware)
+	user, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+
 	id := c.Param("id")
 	
 	var updateDTO application.AssetUpdateDTO
@@ -116,30 +134,40 @@ func (h *AssetHandler) UpdateAsset(c *gin.Context) {
 		return
 	}
 	
-	asset, err := h.assetApp.UpdateAsset(c.Request.Context(), id, updateDTO)
+	// Add user context to DTO
+	updateDTO.Requester = user.(*application.UserDTO).Username
+	updateDTO.RequesterID = user.(*application.UserDTO).ID
+	
+	err := h.assetApp.UpdateAssetWithApproval(c.Request.Context(), id, updateDTO)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	
 	c.JSON(http.StatusOK, gin.H{
-		"asset":   asset,
-		"message": "Asset updated successfully",
+		"message": "Asset update submitted for approval",
 	})
 }
 
 // RequestDecommission handles DELETE /assets/:id
 func (h *AssetHandler) RequestDecommission(c *gin.Context) {
+	// Get user from context (set by auth middleware)
+	user, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+
 	id := c.Param("id")
 	
-	err := h.assetApp.RequestDecommission(c.Request.Context(), id, "System User", "Asset decommission request")
+	err := h.assetApp.RequestDecommission(c.Request.Context(), id, user.(*application.UserDTO).Username, user.(*application.UserDTO).ID, "Asset decommission request")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Decommission workflow created",
+		"message": "Decommission request submitted for approval",
 	})
 }
 

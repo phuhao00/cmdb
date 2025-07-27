@@ -88,28 +88,52 @@ func (h *WorkflowHandler) CreateWorkflow(c *gin.Context) {
 
 // ApproveWorkflow handles PUT /workflows/:id/approve
 func (h *WorkflowHandler) ApproveWorkflow(c *gin.Context) {
-	id := c.Param("id")
-	
-	err := h.workflowApp.ApproveWorkflow(c.Request.Context(), id)
+	workflowID := c.Param("id")
+	user, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+
+	var dto application.ApproveWorkflowDTO
+	if err := c.ShouldBindJSON(&dto); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	userDTO := user.(*application.UserDTO)
+	err := h.workflowApp.ApproveWorkflow(c.Request.Context(), workflowID, userDTO.ID, userDTO.FullName, dto)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
-	c.JSON(http.StatusOK, gin.H{"message": "Workflow approved and executed"})
+
+	c.JSON(http.StatusOK, gin.H{"message": "Workflow approved successfully"})
 }
 
 // RejectWorkflow handles PUT /workflows/:id/reject
 func (h *WorkflowHandler) RejectWorkflow(c *gin.Context) {
-	id := c.Param("id")
-	
-	err := h.workflowApp.RejectWorkflow(c.Request.Context(), id)
+	workflowID := c.Param("id")
+	user, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+
+	var dto application.RejectWorkflowDTO
+	if err := c.ShouldBindJSON(&dto); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	userDTO := user.(*application.UserDTO)
+	err := h.workflowApp.RejectWorkflow(c.Request.Context(), workflowID, userDTO.ID, userDTO.FullName, dto)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
-	c.JSON(http.StatusOK, gin.H{"message": "Workflow rejected"})
+
+	c.JSON(http.StatusOK, gin.H{"message": "Workflow rejected successfully"})
 }
 
 // HandleFeishuWebhook handles POST /feishu/webhook
@@ -155,6 +179,34 @@ func (h *WorkflowHandler) GetAssetWorkflowHistory(c *gin.Context) {
 	assetID := c.Param("assetId")
 	
 	workflows, err := h.workflowApp.GetAssetWorkflowHistory(c.Request.Context(), assetID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, workflows)
+}
+
+// GetPendingWorkflows handles GET /workflows/pending
+func (h *WorkflowHandler) GetPendingWorkflows(c *gin.Context) {
+	workflows, err := h.workflowApp.GetPendingWorkflows(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, workflows)
+}
+
+// GetMyWorkflows handles GET /workflows/my
+func (h *WorkflowHandler) GetMyWorkflows(c *gin.Context) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+	
+	workflows, err := h.workflowApp.GetUserWorkflows(c.Request.Context(), userID.(string))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

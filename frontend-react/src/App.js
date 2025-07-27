@@ -1,84 +1,110 @@
-import React, { useState, useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
-import styled, { createGlobalStyle } from 'styled-components';
+import React, { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import styled from 'styled-components';
+
+import { AuthProvider, useAuth } from './components/AuthContext';
+import Login from './components/Login';
 import Header from './components/Header';
+import AIChat from './components/AIChat';
 import Dashboard from './pages/Dashboard';
 import Assets from './pages/Assets';
 import Workflows from './pages/Workflows';
 import Reports from './pages/Reports';
-import { fetchAssetStats } from './services/api';
 
-// Global styles
-const GlobalStyle = createGlobalStyle`
-  * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
-
-  body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    line-height: 1.6;
-    color: #333;
-    background-color: #f5f7fa;
-  }
-
-  .container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 20px;
-  }
+const AppContainer = styled.div`
+  min-height: 100vh;
+  background: #f5f5f5;
 `;
 
-// Main app container
-const AppContainer = styled.div`
+const MainContent = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 100vh;
 `;
 
-function App() {
-  const [language, setLanguage] = useState('en');
-  const [stats, setStats] = useState({
-    total: 0,
-    online: 0,
-    offline: 0,
-    pending: 0,
-    maintenance: 0,
-    decommissioned: 0
-  });
+const LoadingSpinner = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  font-size: 1.2rem;
+  color: #667eea;
+`;
 
-  useEffect(() => {
-    const loadStats = async () => {
-      try {
-        const data = await fetchAssetStats();
-        setStats(data);
-      } catch (error) {
-        console.error('Failed to load stats:', error);
-      }
-    };
+// Protected Route Component
+const ProtectedRoute = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
+  
+  if (loading) {
+    return <LoadingSpinner>加载中...</LoadingSpinner>;
+  }
+  
+  return isAuthenticated() ? children : <Navigate to="/login" replace />;
+};
 
-    loadStats();
-  }, []);
+// App Layout Component
+const AppLayout = () => {
+  const { user } = useAuth();
+  const [currentPage, setCurrentPage] = useState('dashboard');
 
-  const toggleLanguage = () => {
-    setLanguage(language === 'en' ? 'zh' : 'en');
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
   };
 
   return (
-    <>
-      <GlobalStyle />
-      <AppContainer>
-        <Header language={language} toggleLanguage={toggleLanguage} stats={stats} />
+    <MainContent>
+      <Header user={user} onPageChange={handlePageChange} currentPage={currentPage} />
+      <Routes>
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/assets" element={<Assets />} />
+        <Route path="/workflows" element={<Workflows />} />
+        <Route path="/reports" element={<Reports />} />
+      </Routes>
+      <AIChat />
+    </MainContent>
+  );
+};
+
+// Main App Component
+const AppContent = () => {
+  const { isAuthenticated, login, loading } = useAuth();
+
+  if (loading) {
+    return <LoadingSpinner>初始化中...</LoadingSpinner>;
+  }
+
+  return (
+    <AppContainer>
+      <Router>
         <Routes>
-          <Route path="/" element={<Dashboard language={language} stats={stats} />} />
-          <Route path="/dashboard" element={<Dashboard language={language} stats={stats} />} />
-          <Route path="/assets" element={<Assets language={language} />} />
-          <Route path="/workflows" element={<Workflows language={language} />} />
-          <Route path="/reports" element={<Reports language={language} />} />
+          <Route 
+            path="/login" 
+            element={
+              isAuthenticated() ? 
+                <Navigate to="/dashboard" replace /> : 
+                <Login onLogin={login} />
+            } 
+          />
+          <Route 
+            path="/*" 
+            element={
+              <ProtectedRoute>
+                <AppLayout />
+              </ProtectedRoute>
+            } 
+          />
         </Routes>
-      </AppContainer>
-    </>
+      </Router>
+    </AppContainer>
+  );
+};
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 

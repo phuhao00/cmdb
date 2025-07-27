@@ -26,7 +26,7 @@ func NewWorkflowService(workflowRepo repository.WorkflowRepository, assetRepo re
 }
 
 // CreateWorkflow creates a new workflow
-func (s *WorkflowService) CreateWorkflow(ctx context.Context, workflowType string, assetID string, requester string, priority string, reason string) (*model.Workflow, error) {
+func (s *WorkflowService) CreateWorkflow(ctx context.Context, workflowType string, assetID string, requester string, requesterID string, priority string, reason string, data interface{}) (*model.Workflow, error) {
 	// Find asset
 	asset, err := s.assetRepo.FindByAssetID(ctx, assetID)
 	if err != nil {
@@ -39,8 +39,10 @@ func (s *WorkflowService) CreateWorkflow(ctx context.Context, workflowType strin
 		asset.AssetID,
 		asset.Name,
 		requester,
+		requesterID,
 		model.WorkflowPriority(priority),
 		reason,
+		data,
 	)
 	
 	// Generate workflow ID
@@ -59,9 +61,14 @@ func (s *WorkflowService) CreateWorkflow(ctx context.Context, workflowType strin
 }
 
 // ApproveWorkflow approves a workflow and executes the associated action
-func (s *WorkflowService) ApproveWorkflow(ctx context.Context, id primitive.ObjectID) error {
+func (s *WorkflowService) ApproveWorkflow(ctx context.Context, workflowID, approverID, approverName, comments string) error {
+	objectID, err := primitive.ObjectIDFromHex(workflowID)
+	if err != nil {
+		return err
+	}
+
 	// Find workflow
-	workflow, err := s.workflowRepo.FindByID(ctx, id)
+	workflow, err := s.workflowRepo.FindByID(ctx, objectID)
 	if err != nil {
 		return err
 	}
@@ -72,7 +79,7 @@ func (s *WorkflowService) ApproveWorkflow(ctx context.Context, id primitive.Obje
 	}
 	
 	// Approve workflow
-	workflow.Approve()
+	workflow.Approve(approverID, approverName, comments)
 	
 	// Save workflow
 	if err := s.workflowRepo.Save(ctx, workflow); err != nil {
@@ -84,9 +91,14 @@ func (s *WorkflowService) ApproveWorkflow(ctx context.Context, id primitive.Obje
 }
 
 // RejectWorkflow rejects a workflow
-func (s *WorkflowService) RejectWorkflow(ctx context.Context, id primitive.ObjectID) error {
+func (s *WorkflowService) RejectWorkflow(ctx context.Context, workflowID, approverID, approverName, comments string) error {
+	objectID, err := primitive.ObjectIDFromHex(workflowID)
+	if err != nil {
+		return err
+	}
+
 	// Find workflow
-	workflow, err := s.workflowRepo.FindByID(ctx, id)
+	workflow, err := s.workflowRepo.FindByID(ctx, objectID)
 	if err != nil {
 		return err
 	}
@@ -97,7 +109,7 @@ func (s *WorkflowService) RejectWorkflow(ctx context.Context, id primitive.Objec
 	}
 	
 	// Reject workflow
-	workflow.Reject()
+	workflow.Reject(approverID, approverName, comments)
 	
 	// Save workflow
 	if err := s.workflowRepo.Save(ctx, workflow); err != nil {
@@ -117,9 +129,9 @@ func (s *WorkflowService) HandleFeishuWebhook(ctx context.Context, workflowID st
 	
 	// Process based on status
 	if status == "approved" {
-		return s.ApproveWorkflow(ctx, workflow.ID)
+		return s.ApproveWorkflow(ctx, workflow.ID.Hex(), "feishu-system", "Feishu System", "Approved via Feishu")
 	} else if status == "rejected" {
-		return s.RejectWorkflow(ctx, workflow.ID)
+		return s.RejectWorkflow(ctx, workflow.ID.Hex(), "feishu-system", "Feishu System", "Rejected via Feishu")
 	}
 	
 	return nil
@@ -198,4 +210,20 @@ func (s *WorkflowService) GetWorkflows(ctx context.Context, filter map[string]in
 // GetWorkflowByID gets a workflow by its ID
 func (s *WorkflowService) GetWorkflowByID(ctx context.Context, id primitive.ObjectID) (*model.Workflow, error) {
 	return s.workflowRepo.FindByID(ctx, id)
+}
+
+// GetPendingWorkflows gets all pending workflows
+func (s *WorkflowService) GetPendingWorkflows(ctx context.Context) ([]*model.Workflow, error) {
+	filter := map[string]interface{}{
+		"status": model.PendingStatus,
+	}
+	return s.workflowRepo.FindAll(ctx, filter)
+}
+
+// GetUserWorkflows gets workflows created by a specific user
+func (s *WorkflowService) GetUserWorkflows(ctx context.Context, userID string) ([]*model.Workflow, error) {
+	filter := map[string]interface{}{
+		"requesterId": userID,
+	}
+	return s.workflowRepo.FindAll(ctx, filter)
 }

@@ -47,6 +47,16 @@ type WorkflowFilterDTO struct {
 	Type   string `form:"type"`
 }
 
+// ApproveWorkflowDTO represents approve workflow request data
+type ApproveWorkflowDTO struct {
+	Comments string `json:"comments"`
+}
+
+// RejectWorkflowDTO represents reject workflow request data
+type RejectWorkflowDTO struct {
+	Comments string `json:"comments" binding:"required"`
+}
+
 // WorkflowApplication provides application services for workflows
 type WorkflowApplication struct {
 	workflowService *service.WorkflowService
@@ -127,23 +137,13 @@ func (a *WorkflowApplication) CreateWorkflow(ctx context.Context, createDTO Work
 }
 
 // ApproveWorkflow approves a workflow
-func (a *WorkflowApplication) ApproveWorkflow(ctx context.Context, id string) error {
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return err
-	}
-	
-	return a.workflowService.ApproveWorkflow(ctx, objectID)
+func (a *WorkflowApplication) ApproveWorkflow(ctx context.Context, workflowID, approverID, approverName string, dto ApproveWorkflowDTO) error {
+	return a.workflowService.ApproveWorkflow(ctx, workflowID, approverID, approverName, dto.Comments)
 }
 
 // RejectWorkflow rejects a workflow
-func (a *WorkflowApplication) RejectWorkflow(ctx context.Context, id string) error {
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return err
-	}
-	
-	return a.workflowService.RejectWorkflow(ctx, objectID)
+func (a *WorkflowApplication) RejectWorkflow(ctx context.Context, workflowID, approverID, approverName string, dto RejectWorkflowDTO) error {
+	return a.workflowService.RejectWorkflow(ctx, workflowID, approverID, approverName, dto.Comments)
 }
 
 // HandleFeishuWebhook handles a webhook from Feishu
@@ -174,6 +174,36 @@ func (a *WorkflowApplication) GetAssetWorkflowHistory(ctx context.Context, asset
 		workflowDTOs[i] = mapWorkflowToDTO(workflow)
 	}
 	
+	return workflowDTOs, nil
+}
+
+// GetPendingWorkflows returns pending workflows for approval
+func (a *WorkflowApplication) GetPendingWorkflows(ctx context.Context) ([]*WorkflowDTO, error) {
+	workflows, err := a.workflowService.GetPendingWorkflows(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var workflowDTOs []*WorkflowDTO
+	for _, workflow := range workflows {
+		workflowDTOs = append(workflowDTOs, mapWorkflowToDTO(workflow))
+	}
+
+	return workflowDTOs, nil
+}
+
+// GetUserWorkflows returns workflows created by a specific user
+func (a *WorkflowApplication) GetUserWorkflows(ctx context.Context, userID string) ([]*WorkflowDTO, error) {
+	workflows, err := a.workflowService.GetUserWorkflows(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	var workflowDTOs []*WorkflowDTO
+	for _, workflow := range workflows {
+		workflowDTOs = append(workflowDTOs, mapWorkflowToDTO(workflow))
+	}
+
 	return workflowDTOs, nil
 }
 

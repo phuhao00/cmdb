@@ -2,17 +2,15 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"github.com/cmdb/backend/application"
+	"github.com/cmdb/backend/domain/model"
 	"github.com/cmdb/backend/domain/service"
-	"github.com/cmdb/backend/infrastructure/consul"
+	"github.com/cmdb/backend/infrastructure/middleware"
 	"github.com/cmdb/backend/infrastructure/persistence"
 	"github.com/cmdb/backend/interfaces/api"
 	"github.com/gin-contrib/cors"
@@ -22,160 +20,174 @@ import (
 )
 
 func main() {
-	// Initialize MongoDB connection
+	// Initialize MongoDB
 	mongoURI := getEnv("MONGO_URI", "mongodb://localhost:27017")
-	mongoClient, err := connectToMongoDB(mongoURI)
+	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI(mongoURI))
 	if err != nil {
-		log.Fatalf("Failed to connect to MongoDB: %v", err)
+		log.Fatal("Failed to connect to MongoDB:", err)
 	}
-	defer func() {
-		if err := mongoClient.Disconnect(context.Background()); err != nil {
-			log.Printf("Error disconnecting from MongoDB: %v", err)
-		}
-	}()
+	defer client.Disconnect(context.Background())
 
-	// Initialize database
-	db := mongoClient.Database("cmdb")
+	database := client.Database("cmdb")
 
 	// Initialize repositories
-	assetRepo := persistence.NewMongoDBAssetRepository(db)
-	workflowRepo := persistence.NewMongoDBWorkflowRepository(db)
+	assetRepo := persistence.NewMongoDBAssetRepository(database)
+	workflowRepo := persistence.NewMongoDBWorkflowRepository(database)
+	userRepo := persistence.NewMongoDBUserRepository(database)
 
-	// Initialize domain services
+	// Initialize services
 	assetService := service.NewAssetService(assetRepo, workflowRepo)
 	workflowService := service.NewWorkflowService(workflowRepo, assetRepo)
+	authService := service.NewAuthService(userRepo)
+	aiService := service.NewAIService(assetService, workflowService, userRepo)
 
-	// Initialize application services
-	assetApp := application.NewAssetApplication(assetService)
+	// Initialize applications
+	assetApp := application.NewAssetApplication(assetService, workflowService)
 	workflowApp := application.NewWorkflowApplication(workflowService)
+	authApp := application.NewAuthApplication(authService)
+	aiApp := application.NewAIApplication(aiService)
 
-	// Initialize Consul client
-	consulAddress := getEnv("CONSUL_ADDRESS", "localhost:8500")
-	consulClient, err := consul.NewConsulClient(consulAddress)
-	if err != nil {
-		log.Printf("Warning: Failed to connect to Consul: %v", err)
-	}
+	// Initialize middleware
+	authMiddleware := middleware.NewAuthMiddleware(authApp)
 
-	// Initialize Gin router
+	// Create default admin user if not exists
+	createDefaultAdmin(authService)
+
+	// Initialize handlers
+	assetHandler := api.NewAssetHandler(assetApp)
+	workflowHandler := api.NewWorkflowHandler(workflowApp)
+	reportsHandler := api.NewReportsHandler(assetApp, workflowApp)
+	authHandler := api.NewAuthHandler(authApp)
+	aiHandler := api.NewAIHandler(aiApp)
+
+	// Setup Gin router
+	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
 
-	// Configure CORS
+	// CORS middleware
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"*"},
+		AllowOrigins:     []string{"http://localhost:3000", "http://localhost:8080", "*"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Accept"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
 
-	// Health check endpoint
+	// API routes
+	api := router.Group("/api")
+	{
+		// Public auth routes
+		authHandler.RegisterRoutes(api)
+
+		// Protected routes
+		protected := api.Group("/")
+		protected.Use(authMiddleware.RequireAuth())
+		{
+			// AI routes
+			aiHandler.RegisterRoutes(protected)
+
+			// Asset routes with permission checks
+			assets := protected.Group("/assets")
+			assets.Use(authMiddleware.RequirePermission("assets", "read"))
+			{
+				assets.GET("", assetHandler.GetAssets)
+				assets.GET("/stats", assetHandler.GetAssetStats)
+				assets.GET("/types", assetHandler.GetAssetTypes)
+				assets.GET("/locations", assetHandler.GetAssetLocations)
+				assets.GET("/costs", assetHandler.GetAssetCosts)
+				assets.GET("/critical", assetHandler.GetCriticalAssets)
+				assets.GET("/:id", assetHandler.GetAssetByID)
+
+				// Write operations require additional permissions
+				createGroup := assets.Group("/")
+				createGroup.Use(authMiddleware.RequirePermission("assets", "create"))
+				{
+					createGroup.POST("", assetHandler.CreateAsset)
+					createGroup.POST("/bulk", assetHandler.BulkCreateAssets)
+				}
+
+				updateGroup := assets.Group("/")
+				updateGroup.Use(authMiddleware.RequirePermission("assets", "update"))
+				{
+					updateGroup.PUT("/:id", assetHandler.UpdateAsset)
+					updateGroup.PUT("/:id/costs", assetHandler.UpdateAssetCosts)
+				}
+
+				deleteGroup := assets.Group("/")
+				deleteGroup.Use(authMiddleware.RequirePermission("assets", "delete"))
+				{
+					deleteGroup.DELETE("/:id", assetHandler.RequestDecommission)
+				}
+			}
+
+			// Workflow routes
+			workflows := protected.Group("/workflows")
+			workflows.Use(authMiddleware.RequirePermission("workflows", "read"))
+			{
+				workflows.GET("", workflowHandler.GetWorkflows)
+				workflows.GET("/stats", workflowHandler.GetWorkflowStats)
+				workflows.GET("/pending", workflowHandler.GetPendingWorkflows)
+				workflows.GET("/my", workflowHandler.GetMyWorkflows)
+				workflows.GET("/:id", workflowHandler.GetWorkflowByID)
+
+				// Approval operations require special permissions
+				approvalGroup := workflows.Group("/")
+				approvalGroup.Use(authMiddleware.RequireApprovalPermission())
+				{
+					approvalGroup.POST("/:id/approve", workflowHandler.ApproveWorkflow)
+					approvalGroup.POST("/:id/reject", workflowHandler.RejectWorkflow)
+				}
+			}
+
+			// Reports routes
+			reports := protected.Group("/reports")
+			reports.Use(authMiddleware.RequirePermission("reports", "read"))
+			{
+				reportsHandler.RegisterRoutes(reports)
+			}
+
+			// Admin-only user management routes
+			users := protected.Group("/users")
+			users.Use(authMiddleware.RequireRole("admin"))
+			{
+				// User management routes are already registered in authHandler
+			}
+		}
+	}
+
+	// Health check
 	router.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"status": "ok",
-			"time":   time.Now().Format(time.RFC3339),
-		})
+		c.JSON(http.StatusOK, gin.H{"status": "ok", "timestamp": time.Now()})
 	})
 
-	// API routes
-	apiGroup := router.Group("/api/v1")
-	{
-		// Register handlers
-		assetHandler := api.NewAssetHandler(assetApp)
-		workflowHandler := api.NewWorkflowHandler(workflowApp)
-		reportsHandler := api.NewReportsHandler(assetApp, workflowApp)
-
-		assetHandler.RegisterRoutes(apiGroup)
-		workflowHandler.RegisterRoutes(apiGroup)
-		reportsHandler.RegisterRoutes(apiGroup)
-	}
-
-	// Get server port
-	port := getEnv("PORT", "8081")
-	serverAddress := fmt.Sprintf(":%s", port)
-
-	// Register service with Consul if available
-	if consulClient != nil {
-		serviceID := fmt.Sprintf("cmdb-service-%s", port)
-		serviceName := "cmdb-service"
-		serviceAddress := getEnv("SERVICE_ADDRESS", "localhost")
-
-		portInt := 8080
-		fmt.Sscanf(port, "%d", &portInt)
-
-		err := consulClient.RegisterService(serviceID, serviceName, serviceAddress, portInt, []string{"api", "cmdb"})
-		if err != nil {
-			log.Printf("Warning: Failed to register service with Consul: %v", err)
-		} else {
-			log.Printf("Service registered with Consul: %s", serviceID)
-
-			// Deregister service on shutdown
-			defer func() {
-				if err := consulClient.DeregisterService(serviceID); err != nil {
-					log.Printf("Error deregistering service from Consul: %v", err)
-				}
-			}()
-		}
-	}
-
 	// Start server
-	server := &http.Server{
-		Addr:    serverAddress,
-		Handler: router,
-	}
-
-	// Graceful shutdown
-	go func() {
-		log.Printf("Server listening on %s", serverAddress)
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Failed to start server: %v", err)
-		}
-	}()
-
-	// Wait for interrupt signal
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-
-	log.Println("Shutting down server...")
-
-	// Shutdown with timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	if err := server.Shutdown(ctx); err != nil {
-		log.Fatalf("Server forced to shutdown: %v", err)
-	}
-
-	log.Println("Server exited properly")
+	port := getEnv("PORT", "8080")
+	log.Printf("Server starting on port %s", port)
+	log.Fatal(http.ListenAndServe(":"+port, router))
 }
 
-// connectToMongoDB establishes a connection to MongoDB
-func connectToMongoDB(uri string) (*mongo.Client, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+func createDefaultAdmin(authService *service.AuthService) {
+	ctx := context.Background()
 
-	clientOptions := options.Client().ApplyURI(uri)
-	client, err := mongo.Connect(ctx, clientOptions)
-	if err != nil {
-		return nil, err
+	// Check if admin user already exists
+	admin, err := authService.GetUserByUsername(ctx, "admin")
+	if err == nil && admin != nil {
+		return
 	}
 
-	// Ping the database to verify connection
-	err = client.Ping(ctx, nil)
+	// Create default admin user
+	_, err = authService.CreateUser(ctx, "admin", "admin@cmdb.local", "admin123", "System Administrator", model.AdminRole)
 	if err != nil {
-		return nil, err
+		log.Printf("Warning: Failed to create default admin user: %v", err)
+	} else {
+		log.Println("Default admin user created - Username: admin, Password: admin123")
 	}
-
-	log.Println("Connected to MongoDB")
-	return client, nil
 }
 
-// getEnv gets an environment variable or returns a default value
 func getEnv(key, defaultValue string) string {
-	value := os.Getenv(key)
-	if value == "" {
-		return defaultValue
+	if value := os.Getenv(key); value != "" {
+		return value
 	}
-	return value
+	return defaultValue
 }
