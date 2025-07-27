@@ -41,6 +41,9 @@ services:
       CONSUL_ADDRESS: consul:8500
       PORT: 8081
       SERVICE_ADDRESS: cmdb-api
+      GOPROXY: https://goproxy.cn,direct
+      GOSUMDB: sum.golang.google.cn
+      GO111MODULE: on
     depends_on:
       - mongodb
       - consul

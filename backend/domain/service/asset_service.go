@@ -27,41 +27,43 @@ func NewAssetService(assetRepo repository.AssetRepository, workflowRepo reposito
 func (s *AssetService) CreateAsset(ctx context.Context, name string, assetType string, location string, description string) (*model.Asset, *model.Workflow, error) {
 	// Create new asset
 	asset := model.NewAsset(name, model.AssetType(assetType), location, description)
-	
+
 	// Generate asset ID
 	assetID, err := s.assetRepo.GenerateAssetID(ctx, string(asset.Type))
 	if err != nil {
 		return nil, nil, err
 	}
 	asset.AssetID = assetID
-	
+
 	// Save asset
 	if err := s.assetRepo.Save(ctx, asset); err != nil {
 		return nil, nil, err
 	}
-	
+
 	// Create onboarding workflow
 	workflow := model.NewWorkflow(
 		model.AssetOnboardingType,
 		asset.AssetID,
 		asset.Name,
 		"System User",
+		"system",
 		model.MediumPriority,
 		"New asset registration",
+		asset,
 	)
-	
+
 	// Generate workflow ID
 	workflowID, err := s.workflowRepo.GenerateWorkflowID(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
 	workflow.WorkflowID = workflowID
-	
+
 	// Save workflow
 	if err := s.workflowRepo.Save(ctx, workflow); err != nil {
 		return nil, nil, err
 	}
-	
+
 	return asset, workflow, nil
 }
 
@@ -72,15 +74,15 @@ func (s *AssetService) UpdateAsset(ctx context.Context, id primitive.ObjectID, n
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Update asset
 	asset.Update(name, location, description)
-	
+
 	// Save asset
 	if err := s.assetRepo.Save(ctx, asset); err != nil {
 		return nil, err
 	}
-	
+
 	return asset, nil
 }
 
@@ -91,34 +93,36 @@ func (s *AssetService) RequestDecommission(ctx context.Context, id primitive.Obj
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Check if asset is already decommissioned
 	if asset.IsDecommissioned() {
 		return nil, errors.New("asset is already decommissioned")
 	}
-	
+
 	// Create decommission workflow
 	workflow := model.NewWorkflow(
 		model.AssetDecommissionType,
 		asset.AssetID,
 		asset.Name,
 		requester,
+		"user",
 		model.MediumPriority,
 		reason,
+		asset,
 	)
-	
+
 	// Generate workflow ID
 	workflowID, err := s.workflowRepo.GenerateWorkflowID(ctx)
 	if err != nil {
 		return nil, err
 	}
 	workflow.WorkflowID = workflowID
-	
+
 	// Save workflow
 	if err := s.workflowRepo.Save(ctx, workflow); err != nil {
 		return nil, err
 	}
-	
+
 	return workflow, nil
 }
 
@@ -129,34 +133,39 @@ func (s *AssetService) RequestStatusChange(ctx context.Context, id primitive.Obj
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Check if asset is decommissioned
 	if asset.IsDecommissioned() {
 		return nil, errors.New("cannot change status of decommissioned asset")
 	}
-	
+
 	// Create status change workflow
 	workflow := model.NewWorkflow(
 		model.StatusChangeType,
 		asset.AssetID,
 		asset.Name,
 		requester,
+		"user",
 		model.MediumPriority,
 		reason,
+		map[string]interface{}{
+			"oldStatus":       asset.Status,
+			"requestedAction": "status_change",
+		},
 	)
-	
+
 	// Generate workflow ID
 	workflowID, err := s.workflowRepo.GenerateWorkflowID(ctx)
 	if err != nil {
 		return nil, err
 	}
 	workflow.WorkflowID = workflowID
-	
+
 	// Save workflow
 	if err := s.workflowRepo.Save(ctx, workflow); err != nil {
 		return nil, err
 	}
-	
+
 	return workflow, nil
 }
 
@@ -167,46 +176,48 @@ func (s *AssetService) RequestMaintenance(ctx context.Context, id primitive.Obje
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Check if asset is decommissioned
 	if asset.IsDecommissioned() {
 		return nil, errors.New("cannot request maintenance for decommissioned asset")
 	}
-	
+
 	// Check if asset is already in maintenance
 	if asset.IsInMaintenance() {
 		return nil, errors.New("asset is already in maintenance")
 	}
-	
+
 	// Create maintenance workflow
 	workflow := model.NewWorkflow(
 		model.MaintenanceRequestType,
 		asset.AssetID,
 		asset.Name,
 		requester,
+		"user",
 		model.MediumPriority,
 		reason,
+		asset,
 	)
-	
+
 	// Generate workflow ID
 	workflowID, err := s.workflowRepo.GenerateWorkflowID(ctx)
 	if err != nil {
 		return nil, err
 	}
 	workflow.WorkflowID = workflowID
-	
+
 	// Save workflow
 	if err := s.workflowRepo.Save(ctx, workflow); err != nil {
 		return nil, err
 	}
-	
+
 	return workflow, nil
 }
 
 // BulkCreateAssets creates multiple assets and initiates onboarding workflows
 func (s *AssetService) BulkCreateAssets(ctx context.Context, assets []model.Asset) (int, error) {
 	successCount := 0
-	
+
 	for i := range assets {
 		// Generate asset ID
 		assetID, err := s.assetRepo.GenerateAssetID(ctx, string(assets[i].Type))
@@ -214,37 +225,39 @@ func (s *AssetService) BulkCreateAssets(ctx context.Context, assets []model.Asse
 			continue
 		}
 		assets[i].AssetID = assetID
-		
+
 		// Save asset
 		if err := s.assetRepo.Save(ctx, &assets[i]); err != nil {
 			continue
 		}
-		
+
 		// Create onboarding workflow
 		workflow := model.NewWorkflow(
 			model.AssetOnboardingType,
 			assets[i].AssetID,
 			assets[i].Name,
 			"System User",
+			"system",
 			model.MediumPriority,
 			"Bulk asset registration",
+			&assets[i],
 		)
-		
+
 		// Generate workflow ID
 		workflowID, err := s.workflowRepo.GenerateWorkflowID(ctx)
 		if err != nil {
 			continue
 		}
 		workflow.WorkflowID = workflowID
-		
+
 		// Save workflow
 		if err := s.workflowRepo.Save(ctx, workflow); err != nil {
 			continue
 		}
-		
+
 		successCount++
 	}
-	
+
 	return successCount, nil
 }
 
@@ -271,4 +284,93 @@ func (s *AssetService) GetAssets(ctx context.Context, filter map[string]interfac
 // GetAssetByID gets an asset by its ID
 func (s *AssetService) GetAssetByID(ctx context.Context, id primitive.ObjectID) (*model.Asset, error) {
 	return s.assetRepo.FindByID(ctx, id)
+}
+
+// CreateAssetWithApproval creates a new asset with approval workflow
+func (s *AssetService) CreateAssetWithApproval(ctx context.Context, name string, assetType string, location string, description string, requester string, requesterID string) (*model.Asset, *model.Workflow, error) {
+	// Create new asset
+	asset := model.NewAsset(name, model.AssetType(assetType), location, description)
+
+	// Generate asset ID
+	assetID, err := s.assetRepo.GenerateAssetID(ctx, string(asset.Type))
+	if err != nil {
+		return nil, nil, err
+	}
+	asset.AssetID = assetID
+
+	// Save asset
+	if err := s.assetRepo.Save(ctx, asset); err != nil {
+		return nil, nil, err
+	}
+
+	// Create onboarding workflow
+	workflow := model.NewWorkflow(
+		model.AssetOnboardingType,
+		asset.AssetID,
+		asset.Name,
+		requester,
+		requesterID,
+		model.MediumPriority,
+		"Asset creation approval",
+		asset,
+	)
+
+	// Generate workflow ID
+	workflowID, err := s.workflowRepo.GenerateWorkflowID(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	workflow.WorkflowID = workflowID
+
+	// Save workflow
+	if err := s.workflowRepo.Save(ctx, workflow); err != nil {
+		return nil, nil, err
+	}
+
+	return asset, workflow, nil
+}
+
+// CreateAssetUpdateWorkflow creates an update workflow for an asset
+func (s *AssetService) CreateAssetUpdateWorkflow(ctx context.Context, id primitive.ObjectID, name string, location string, description string, requester string, requesterID string) (*model.Workflow, error) {
+	// Find asset
+	asset, err := s.assetRepo.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create update data
+	updateData := map[string]interface{}{
+		"originalName":        asset.Name,
+		"originalLocation":    asset.Location,
+		"originalDescription": asset.Description,
+		"newName":             name,
+		"newLocation":         location,
+		"newDescription":      description,
+	}
+
+	// Create update workflow
+	workflow := model.NewWorkflow(
+		model.AssetUpdateType,
+		asset.AssetID,
+		asset.Name,
+		requester,
+		requesterID,
+		model.MediumPriority,
+		"Asset update approval",
+		updateData,
+	)
+
+	// Generate workflow ID
+	workflowID, err := s.workflowRepo.GenerateWorkflowID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	workflow.WorkflowID = workflowID
+
+	// Save workflow
+	if err := s.workflowRepo.Save(ctx, workflow); err != nil {
+		return nil, err
+	}
+
+	return workflow, nil
 }
