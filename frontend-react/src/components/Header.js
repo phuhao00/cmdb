@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { FaServer, FaTasks, FaChartBar, FaDatabase, FaUser, FaSignOutAlt, FaCog, FaShieldAlt } from 'react-icons/fa';
 import { useAuth } from './AuthContext';
 
@@ -167,6 +167,7 @@ const MenuItem = styled.button`
 const Header = () => {
   const { user, logout, hasPermission } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   const navItems = [
@@ -216,7 +217,7 @@ const Header = () => {
         <Navigation>
           {visibleNavItems.map((item) => {
             const IconComponent = item.icon;
-            const isActive = window.location.pathname === item.path;
+            const isActive = location.pathname === item.path;
             return (
               <NavItem
                 key={item.id}
