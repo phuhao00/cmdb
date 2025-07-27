@@ -135,6 +135,7 @@ const DesktopTableContainer = styled.div`
 const AssetsTable = styled.table`
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed; /* 固定表格布局以更好控制列宽 */
 `;
 
 const TableHead = styled.thead`
@@ -148,6 +149,14 @@ const TableHeaderCell = styled.th`
   font-weight: 600;
   font-size: 0.95rem;
   letter-spacing: 0.5px;
+  
+  /* 设置各列的固定宽度 */
+  &:nth-child(1) { width: 18%; } /* 名称 */
+  &:nth-child(2) { width: 12%; } /* 类型 */
+  &:nth-child(3) { width: 12%; } /* 状态 */
+  &:nth-child(4) { width: 25%; } /* 位置 */
+  &:nth-child(5) { width: 20%; } /* 描述 */
+  &:nth-child(6) { width: 13%; } /* 操作 */
 `;
 
 const TableRow = styled.tr`
@@ -161,6 +170,21 @@ const TableRow = styled.tr`
     padding: 20px 16px;
     border-bottom: 1px solid #eee;
     vertical-align: middle;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    
+    /* 描述列允许换行 */
+    &:nth-child(5) {
+      white-space: normal;
+      word-break: break-word;
+    }
+    
+    /* 操作列不换行，居中对齐 */
+    &:nth-child(6) {
+      white-space: nowrap;
+      text-align: center;
+    }
   }
 `;
 
@@ -256,7 +280,20 @@ const StatusBadge = styled.span`
   }
 `;
 
-const ActionButtons = styled.div`
+// 桌面端操作按钮容器
+const DesktopActionButtons = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  flex-wrap: nowrap;
+  
+  @media (max-width: 1200px) {
+    gap: 0.3rem;
+  }
+`;
+
+// 移动端操作按钮容器
+const MobileActionButtons = styled.div`
   display: flex;
   gap: 0.8rem;
   flex-wrap: wrap;
@@ -266,7 +303,95 @@ const ActionButtons = styled.div`
   }
 `;
 
-const ActionButton = styled.button`
+// 桌面端操作按钮（只显示图标）
+const DesktopActionButton = styled.button`
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+  position: relative;
+
+  &.view {
+    background: #3498db;
+    color: white;
+    
+    &:hover {
+      background: #2980b9;
+    }
+  }
+
+  &.edit {
+    background: #f39c12;
+    color: white;
+    
+    &:hover {
+      background: #e67e22;
+    }
+  }
+
+  &.status {
+    background: #2ecc71;
+    color: white;
+    
+    &:hover {
+      background: #27ae60;
+    }
+  }
+
+  &.delete {
+    background: #e74c3c;
+    color: white;
+    
+    &:hover {
+      background: #c0392b;
+    }
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
+
+  /* Tooltip 效果 */
+  &:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 110%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.8);
+    color: white;
+    padding: 0.5rem 0.8rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    z-index: 1000;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+  }
+
+  &:hover::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: rgba(0,0,0,0.8);
+    z-index: 1000;
+  }
+`;
+
+// 移动端操作按钮（显示图标和文字）
+const MobileActionButton = styled.button`
   padding: 8px 14px;
   border: none;
   border-radius: 6px;
@@ -878,34 +1003,45 @@ const Assets = ({ language = 'zh' }) => {
                 <tbody>
                   {currentAssets.map(asset => (
                     <TableRow key={asset.id || asset._id}>
-                      <td style={{ fontWeight: '600', color: '#2c3e50' }}>{asset.name}</td>
+                      <td style={{ fontWeight: '600', color: '#2c3e50' }} title={asset.name}>
+                        {asset.name}
+                      </td>
                       <td>{t(asset.type)}</td>
                       <td>
                         <StatusBadge className={asset.status}>
                           {t(asset.status)}
                         </StatusBadge>
                       </td>
-                      <td>{asset.location}</td>
-                      <td>{asset.description || '-'}</td>
+                      <td title={asset.location}>{asset.location}</td>
+                      <td title={asset.description || '-'}>{asset.description || '-'}</td>
                       <td>
-                        <ActionButtons>
-                          <ActionButton className="view" title={t('view')}>
+                        <DesktopActionButtons>
+                          <DesktopActionButton 
+                            className="view" 
+                            data-tooltip={t('view')}
+                          >
                             <FaEye />
-                          </ActionButton>
-                          <ActionButton className="edit" title={t('edit')}>
+                          </DesktopActionButton>
+                          <DesktopActionButton 
+                            className="edit" 
+                            data-tooltip={t('edit')}
+                          >
                             <FaEdit />
-                          </ActionButton>
-                          <ActionButton className="status" title={t('power')}>
+                          </DesktopActionButton>
+                          <DesktopActionButton 
+                            className="status" 
+                            data-tooltip={t('power')}
+                          >
                             <FaPowerOff />
-                          </ActionButton>
-                          <ActionButton 
+                          </DesktopActionButton>
+                          <DesktopActionButton 
                             className="delete" 
-                            title={t('delete')}
+                            data-tooltip={t('delete')}
                             onClick={() => handleDeleteAsset(asset.id || asset._id)}
                           >
                             <FaTrash />
-                          </ActionButton>
-                        </ActionButtons>
+                          </DesktopActionButton>
+                        </DesktopActionButtons>
                       </td>
                     </TableRow>
                   ))}
@@ -941,23 +1077,23 @@ const Assets = ({ language = 'zh' }) => {
                     )}
                   </CardInfo>
                   
-                  <ActionButtons>
-                    <ActionButton className="view">
+                  <MobileActionButtons>
+                    <MobileActionButton className="view">
                       <FaEye /> {t('view')}
-                    </ActionButton>
-                    <ActionButton className="edit">
+                    </MobileActionButton>
+                    <MobileActionButton className="edit">
                       <FaEdit /> {t('edit')}
-                    </ActionButton>
-                    <ActionButton className="status">
+                    </MobileActionButton>
+                    <MobileActionButton className="status">
                       <FaPowerOff /> {t('power')}
-                    </ActionButton>
-                    <ActionButton 
+                    </MobileActionButton>
+                    <MobileActionButton 
                       className="delete"
                       onClick={() => handleDeleteAsset(asset.id || asset._id)}
                     >
                       <FaTrash /> {t('delete')}
-                    </ActionButton>
-                  </ActionButtons>
+                    </MobileActionButton>
+                  </MobileActionButtons>
                 </AssetCard>
               ))}
             </MobileCardContainer>
