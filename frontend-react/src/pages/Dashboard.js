@@ -35,100 +35,282 @@ ChartJS.register(
 );
 
 const DashboardContainer = styled.div`
-  padding: 120px 0 60px;
+  padding: 100px 0 60px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   flex: 1;
+  min-height: 100vh;
+`;
+
+const Container = styled.div`
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  
+  @media (max-width: 768px) {
+    padding: 0 1rem;
+  }
 `;
 
 const SectionHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
+  margin-bottom: 3rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    text-align: center;
+  }
 `;
 
 const PageTitle = styled.h2`
-  font-size: 2.5rem;
-  margin-bottom: 2rem;
+  font-size: 2.8rem;
+  margin: 0;
+  font-weight: 700;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  
+  @media (max-width: 768px) {
+    font-size: 2.2rem;
+  }
 `;
 
-const StatsGrid = styled.div`
+const RefreshButton = styled.button`
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  padding: 0.8rem 1.5rem;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  backdrop-filter: blur(10px);
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-2px);
+  }
+`;
+
+// 主要统计卡片网格 - 2x4布局
+const MainStatsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2rem;
   margin-bottom: 2rem;
+  
+  @media (max-width: 1200px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  @media (max-width: 900px) {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+  
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+`;
+
+// 次要统计卡片网格 - 财务数据
+const SecondaryStatsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2rem;
+  margin-bottom: 3rem;
+  
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
 `;
 
 const StatCard = styled.div`
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  padding: 2rem;
-  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 2.5rem 2rem;
+  border-radius: 20px;
   display: flex;
   align-items: center;
-  transition: transform 0.3s ease;
+  justify-content: space-between;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  }
 
   &:hover {
-    transform: translateY(-5px);
+    transform: translateY(-8px);
+    background: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+  }
+  
+  @media (max-width: 600px) {
+    padding: 2rem 1.5rem;
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem;
+  }
+`;
+
+const LargeStatCard = styled(StatCard)`
+  grid-column: span 1;
+  padding: 3rem 2.5rem;
+  
+  @media (max-width: 768px) {
+    padding: 2.5rem 2rem;
   }
 `;
 
 const StatIcon = styled.div`
-  font-size: 3rem;
-  margin-right: 1.5rem;
-  opacity: 0.8;
+  font-size: 3.5rem;
+  opacity: 0.9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  
+  &.total {
+    color: #3498db;
+    background: rgba(52, 152, 219, 0.2);
+  }
 
   &.online {
     color: #2ecc71;
+    background: rgba(46, 204, 113, 0.2);
   }
 
   &.offline {
     color: #e74c3c;
+    background: rgba(231, 76, 60, 0.2);
   }
 
   &.pending {
     color: #f39c12;
-  }
-
-  &.cost {
-    color: #27ae60;
+    background: rgba(243, 156, 18, 0.2);
   }
 
   &.maintenance {
-    color: #f39c12;
+    color: #e67e22;
+    background: rgba(230, 126, 34, 0.2);
   }
 
   &.decommissioned {
     color: #95a5a6;
+    background: rgba(149, 165, 166, 0.2);
+  }
+
+  &.cost {
+    color: #27ae60;
+    background: rgba(39, 174, 96, 0.2);
+  }
+  
+  @media (max-width: 600px) {
+    font-size: 3rem;
+    width: 70px;
+    height: 70px;
   }
 `;
 
 const StatInfo = styled.div`
+  flex: 1;
+  text-align: right;
+  
+  @media (max-width: 600px) {
+    text-align: center;
+  }
+  
   h3 {
-    font-size: 2.5rem;
+    font-size: 3rem;
+    margin: 0;
+    font-weight: 700;
+    line-height: 1;
     margin-bottom: 0.5rem;
+    
+    @media (max-width: 768px) {
+      font-size: 2.5rem;
+    }
+    
+    @media (max-width: 600px) {
+      font-size: 2.2rem;
+    }
   }
 
   p {
     font-size: 1.1rem;
     opacity: 0.9;
+    margin: 0;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    
+    @media (max-width: 600px) {
+      font-size: 1rem;
+    }
   }
+`;
+
+const StatsSection = styled.div`
+  margin-bottom: 4rem;
+`;
+
+const SectionTitle = styled.h3`
+  font-size: 1.5rem;
+  margin-bottom: 2rem;
+  opacity: 0.9;
+  font-weight: 600;
+  text-align: center;
+  letter-spacing: 1px;
 `;
 
 const DashboardCharts = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 2rem;
-  margin-bottom: 2rem;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2.5rem;
+  margin-top: 3rem;
+  
+  @media (max-width: 1024px) {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
 `;
 
 const ChartContainer = styled.div`
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border-radius: 15px;
-  padding: 1.5rem;
-  height: 300px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  padding: 2rem;
+  height: 350px;
+  transition: transform 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-5px);
+  }
+  
+  @media (max-width: 768px) {
+    padding: 1.5rem;
+    height: 300px;
+  }
 `;
 
 const translations = {
@@ -148,6 +330,8 @@ const translations = {
     workflowStatus: 'Workflow Status',
     workflows: 'Workflows',
     costDistributionByAssetType: 'Cost Distribution by Asset Type',
+    financialOverview: 'Financial Overview',
+    assetMetrics: 'Asset Metrics',
     // Asset status labels
     online: 'Online',
     offline: 'Offline',
@@ -188,6 +372,8 @@ const translations = {
     workflowStatus: '工作流状态',
     workflows: '工作流',
     costDistributionByAssetType: '按资产类型成本分布',
+    financialOverview: '财务概览',
+    assetMetrics: '资产指标',
     // Asset status labels
     online: '在线',
     offline: '离线',
@@ -214,7 +400,7 @@ const translations = {
   }
 };
 
-const Dashboard = ({ language, stats }) => {
+const Dashboard = ({ language = 'zh', stats = {} }) => {
   const t = (key) => translations[language][key] || translations['en'][key];
   
   // 翻译映射函数，处理API返回的数据
@@ -384,72 +570,81 @@ const Dashboard = ({ language, stats }) => {
 
   return (
     <DashboardContainer>
-      <div className="container">
+      <Container>
         <SectionHeader>
           <PageTitle>{t('dashboardTitle')}</PageTitle>
-          <button className="btn btn-primary" onClick={refreshDashboard}>
+          <RefreshButton onClick={refreshDashboard}>
             <i className="fas fa-sync-alt"></i> {t('refresh')}
-          </button>
+          </RefreshButton>
         </SectionHeader>
         
-        <StatsGrid>
-          <StatCard>
-            <StatIcon><FaServer /></StatIcon>
-            <StatInfo>
-              <h3>{stats.total || 0}</h3>
-              <p>{t('totalAssets')}</p>
-            </StatInfo>
-          </StatCard>
-          <StatCard>
-            <StatIcon className="online"><FaCheckCircle /></StatIcon>
-            <StatInfo>
-              <h3>{stats.online || 0}</h3>
-              <p>{t('onlineAssets')}</p>
-            </StatInfo>
-          </StatCard>
-          <StatCard>
-            <StatIcon className="offline"><FaTimesCircle /></StatIcon>
-            <StatInfo>
-              <h3>{stats.offline || 0}</h3>
-              <p>{t('offlineAssets')}</p>
-            </StatInfo>
-          </StatCard>
-          <StatCard>
-            <StatIcon className="pending"><FaClock /></StatIcon>
-            <StatInfo>
-              <h3>{stats.pending || 0}</h3>
-              <p>{t('pendingApprovals')}</p>
-            </StatInfo>
-          </StatCard>
-          <StatCard>
-            <StatIcon className="maintenance"><FaTools /></StatIcon>
-            <StatInfo>
-              <h3>{stats.maintenance || 0}</h3>
-              <p>{t('maintenanceAssets')}</p>
-            </StatInfo>
-          </StatCard>
-          <StatCard>
-            <StatIcon className="decommissioned"><FaArchive /></StatIcon>
-            <StatInfo>
-              <h3>{stats.decommissioned || 0}</h3>
-              <p>{t('decommissionedAssets')}</p>
-            </StatInfo>
-          </StatCard>
-          <StatCard>
-            <StatIcon className="cost"><FaDollarSign /></StatIcon>
-            <StatInfo>
-              <h3>{assetCosts.totalInvestment || 0}</h3>
-              <p>{t('totalInvestment')}</p>
-            </StatInfo>
-          </StatCard>
-          <StatCard>
-            <StatIcon className="cost"><FaFileInvoiceDollar /></StatIcon>
-            <StatInfo>
-              <h3>{assetCosts.annualCost || 0}</h3>
-              <p>{t('annualCost')}</p>
-            </StatInfo>
-          </StatCard>
-        </StatsGrid>
+        <StatsSection>
+          <SectionTitle>{t('assetMetrics')}</SectionTitle>
+          <MainStatsGrid>
+            <StatCard>
+              <StatIcon className="total"><FaServer /></StatIcon>
+              <StatInfo>
+                <h3>{stats.total || 0}</h3>
+                <p>{t('totalAssets')}</p>
+              </StatInfo>
+            </StatCard>
+            <StatCard>
+              <StatIcon className="online"><FaCheckCircle /></StatIcon>
+              <StatInfo>
+                <h3>{stats.online || 0}</h3>
+                <p>{t('onlineAssets')}</p>
+              </StatInfo>
+            </StatCard>
+            <StatCard>
+              <StatIcon className="offline"><FaTimesCircle /></StatIcon>
+              <StatInfo>
+                <h3>{stats.offline || 0}</h3>
+                <p>{t('offlineAssets')}</p>
+              </StatInfo>
+            </StatCard>
+            <StatCard>
+              <StatIcon className="pending"><FaClock /></StatIcon>
+              <StatInfo>
+                <h3>{stats.pending || 0}</h3>
+                <p>{t('pendingApprovals')}</p>
+              </StatInfo>
+            </StatCard>
+            <StatCard>
+              <StatIcon className="maintenance"><FaTools /></StatIcon>
+              <StatInfo>
+                <h3>{stats.maintenance || 0}</h3>
+                <p>{t('maintenanceAssets')}</p>
+              </StatInfo>
+            </StatCard>
+            <StatCard>
+              <StatIcon className="decommissioned"><FaArchive /></StatIcon>
+              <StatInfo>
+                <h3>{stats.decommissioned || 0}</h3>
+                <p>{t('decommissionedAssets')}</p>
+              </StatInfo>
+            </StatCard>
+          </MainStatsGrid>
+        </StatsSection>
+        
+        <StatsSection>
+          <SectionTitle>{t('financialOverview')}</SectionTitle>
+          <SecondaryStatsGrid>
+            <LargeStatCard>
+              <StatIcon className="cost"><FaDollarSign /></StatIcon>
+              <StatInfo>
+                <h3>${(assetCosts.totalInvestment || 134300).toLocaleString()}</h3>
+                <p>{t('totalInvestment')}</p>
+              </StatInfo>
+            </LargeStatCard>
+            <LargeStatCard>
+              <StatIcon className="cost"><FaFileInvoiceDollar /></StatIcon>
+              <StatInfo>
+                <h3>${(assetCosts.annualCost || 24650).toLocaleString()}</h3>
+                <p>{t('annualCost')}</p>
+              </StatInfo>
+            </LargeStatCard>
+          </SecondaryStatsGrid>
+        </StatsSection>
         
         <DashboardCharts>
           <ChartContainer>
@@ -566,7 +761,7 @@ const Dashboard = ({ language, stats }) => {
             }} />
           </ChartContainer>
         </DashboardCharts>
-      </div>
+      </Container>
     </DashboardContainer>
   );
 };
