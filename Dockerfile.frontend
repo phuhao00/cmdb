@@ -1,8 +1,11 @@
 # Build stage
 FROM node:18-alpine as builder
 
-# Set npm config to use Chinese mirror for better network access in China
-RUN npm config set registry https://registry.npmmirror.com/
+# Set npm config to use Chinese mirror and configure retry settings
+RUN npm config set registry https://registry.npmmirror.com/ && \
+    npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retry-maxtimeout 120000 && \
+    npm config set fetch-retries 5
 
 # Set the working directory
 WORKDIR /app
@@ -10,8 +13,8 @@ WORKDIR /app
 # Copy package.json and package-lock.json (if available)
 COPY frontend-react/package.json ./
 
-# Install dependencies with network retry
-RUN npm install --network-timeout=30000
+# Install dependencies with better network configuration and retry
+RUN npm install --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000 --fetch-retries=5
 
 # Copy the rest of the application code
 COPY frontend-react/ .

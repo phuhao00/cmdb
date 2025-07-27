@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import styled from 'styled-components';
 
 import { AuthProvider, useAuth } from './components/AuthContext';
@@ -76,26 +76,24 @@ const AppContent = () => {
 
   return (
     <AppContainer>
-      <Router>
-        <Routes>
-          <Route 
-            path="/login" 
-            element={
-              isAuthenticated() ? 
-                <Navigate to="/dashboard" replace /> : 
-                <Login onLogin={login} />
-            } 
-          />
-          <Route 
-            path="/*" 
-            element={
-              <ProtectedRoute>
-                <AppLayout />
-              </ProtectedRoute>
-            } 
-          />
-        </Routes>
-      </Router>
+      <Routes>
+        <Route 
+          path="/login" 
+          element={
+            isAuthenticated() ? 
+              <Navigate to="/dashboard" replace /> : 
+              <Login onLogin={login} />
+          } 
+        />
+        <Route 
+          path="/*" 
+          element={
+            <ProtectedRoute>
+              <AppLayout />
+            </ProtectedRoute>
+          } 
+        />
+      </Routes>
     </AppContainer>
   );
 };
