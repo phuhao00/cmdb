@@ -1,108 +1,85 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import styled, { keyframes } from 'styled-components';
-import { FaPaperPlane, FaRobot, FaUser, FaTimes, FaExpand, FaCompress, FaChevronUp, FaCopy, FaRedo, FaVolumeUp } from 'react-icons/fa';
+import styled, { keyframes, css } from 'styled-components';
+import { FaPaperPlane, FaRobot, FaUser, FaTimes, FaExpand, FaCompress, FaChevronUp, FaCopy, FaRedo, FaVolumeUp, FaMinus } from 'react-icons/fa';
 import { useAuth } from './AuthContext';
 
 // 动画定义
 const slideUp = keyframes`
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(30px) scale(0.95);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
+`;
+
+const fadeIn = keyframes`
+  from { opacity: 0; }
+  to { opacity: 1; }
 `;
 
 const bounceIn = keyframes`
   0% {
     opacity: 0;
-    transform: scale(0.3);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.05);
-  }
-  70% {
-    transform: scale(0.9);
+    transform: translateY(20px);
   }
   100% {
     opacity: 1;
-    transform: scale(1);
+    transform: translateY(0);
   }
 `;
 
 const pulse = keyframes`
-  0% {
-    box-shadow: 0 0 0 0 rgba(255, 153, 0, 0.7);
-  }
-  70% {
-    box-shadow: 0 0 0 10px rgba(255, 153, 0, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(255, 153, 0, 0);
-  }
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; }
 `;
 
 const typing = keyframes`
-  0%, 60%, 100% {
-    transform: translateY(0);
-  }
-  30% {
-    transform: translateY(-10px);
-  }
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-8px); }
 `;
 
+// 主容器 - AWS风格
 const ChatContainer = styled.div`
   position: fixed;
-  bottom: 100px;
+  bottom: 90px;
   right: 24px;
-  width: ${props => props.isExpanded ? '450px' : '400px'};
-  height: ${props => props.isExpanded ? '700px' : '620px'};
-  background: white;
-  border-radius: 20px;
+  width: ${props => props.isExpanded ? '420px' : '380px'};
+  height: ${props => props.isExpanded ? '680px' : '580px'};
+  background: #ffffff;
+  border-radius: 12px;
   box-shadow: 
-    0 20px 60px rgba(0, 0, 0, 0.15), 
-    0 8px 32px rgba(0, 0, 0, 0.1),
-    0 0 0 1px rgba(255, 255, 255, 0.05);
+    0 16px 48px rgba(0, 0, 0, 0.1),
+    0 8px 16px rgba(0, 0, 0, 0.08),
+    0 0 0 1px rgba(0, 0, 0, 0.04);
   display: flex;
   flex-direction: column;
   z-index: 1000;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   overflow: hidden;
-  animation: ${slideUp} 0.3s ease-out;
-  backdrop-filter: blur(10px);
+  animation: ${slideUp} 0.4s ease-out;
 
   @media (max-width: 768px) {
     width: calc(100vw - 32px);
-    height: ${props => props.isExpanded ? '85vh' : '75vh'};
+    height: 75vh;
     bottom: 80px;
     right: 16px;
     left: 16px;
   }
 `;
 
+// 头部 - 简洁设计
 const ChatHeader = styled.div`
-  background: linear-gradient(135deg, #232F3E 0%, #FF9900 100%);
+  background: #232f3e;
   color: white;
-  padding: 24px;
+  padding: 20px 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-radius: 20px 20px 0 0;
-  position: relative;
-  
-  &::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-  }
+  border-radius: 12px 12px 0 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 `;
 
 const HeaderTitle = styled.div`
@@ -111,15 +88,16 @@ const HeaderTitle = styled.div`
   gap: 12px;
   font-weight: 600;
   font-size: 16px;
+  color: #ffffff;
 `;
 
-const StatusIndicator = styled.div`
+const StatusDot = styled.div`
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #4ade80;
+  background: #00d26a;
   margin-left: 8px;
-  animation: ${pulse} 2s infinite;
+  animation: ${pulse} 2s infinite ease-in-out;
 `;
 
 const HeaderActions = styled.div`
@@ -128,145 +106,11 @@ const HeaderActions = styled.div`
 `;
 
 const HeaderButton = styled.button`
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.1);
   border: none;
-  color: white;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  backdrop-filter: blur(10px);
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.25);
-    transform: scale(1.05);
-  }
-`;
-
-const MessagesContainer = styled.div`
-  flex: 1;
-  overflow-y: auto;
-  padding: 24px;
-  background: linear-gradient(180deg, #fafbfc 0%, #f8f9fa 100%);
-  
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-  
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  
-  &::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #e1e5e9, #c1c7cd);
-    border-radius: 3px;
-  }
-  
-  &::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, #c1c7cd, #a1a7ad);
-  }
-`;
-
-const Message = styled.div`
-  display: flex;
-  gap: 16px;
-  margin-bottom: 24px;
-  flex-direction: ${props => props.isUser ? 'row-reverse' : 'row'};
-  animation: ${bounceIn} 0.4s ease-out;
-`;
-
-const MessageAvatar = styled.div`
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: ${props => props.isUser 
-    ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
-    : 'linear-gradient(135deg, #232F3E 0%, #FF9900 100%)'};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  flex-shrink: 0;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-  border: 2px solid white;
-`;
-
-const MessageContent = styled.div`
-  flex: 1;
-  max-width: 320px;
-`;
-
-const MessageBubble = styled.div`
-  background: ${props => props.isUser 
-    ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
-    : 'white'};
-  color: ${props => props.isUser ? 'white' : '#2c3e50'};
-  padding: 18px 22px;
-  border-radius: ${props => props.isUser 
-    ? '22px 22px 6px 22px' 
-    : '22px 22px 22px 6px'};
-  word-wrap: break-word;
-  line-height: 1.6;
-  font-size: 14px;
-  box-shadow: ${props => props.isUser 
-    ? '0 4px 16px rgba(102, 126, 234, 0.3)' 
-    : '0 4px 16px rgba(0, 0, 0, 0.08)'};
-  white-space: pre-wrap;
-  position: relative;
-  border: ${props => props.isUser ? 'none' : '1px solid rgba(0, 0, 0, 0.06)'};
-
-  /* 代码块样式 */
-  pre {
-    background: ${props => props.isUser ? 'rgba(255, 255, 255, 0.1)' : '#f8f9fa'};
-    padding: 12px;
-    border-radius: 8px;
-    margin: 8px 0;
-    font-family: 'Monaco', 'Menlo', monospace;
-    font-size: 13px;
-    overflow-x: auto;
-  }
-
-  /* 列表样式 */
-  ul, ol {
-    margin: 8px 0;
-    padding-left: 20px;
-  }
-
-  li {
-    margin: 4px 0;
-  }
-`;
-
-const MessageTime = styled.div`
-  font-size: 11px;
-  color: #adb5bd;
-  margin-top: 4px;
-  text-align: ${props => props.isUser ? 'right' : 'left'};
-`;
-
-const MessageActions = styled.div`
-  display: flex;
-  gap: 4px;
-  margin-top: 8px;
-  justify-content: ${props => props.isUser ? 'flex-end' : 'flex-start'};
-  opacity: 0;
-  transition: opacity 0.2s ease;
-
-  ${Message}:hover & {
-    opacity: 1;
-  }
-`;
-
-const ActionButton = styled.button`
-  background: rgba(108, 117, 125, 0.1);
-  border: none;
-  color: #6c757d;
-  width: 28px;
-  height: 28px;
+  color: #ffffff;
+  width: 32px;
+  height: 32px;
   border-radius: 6px;
   cursor: pointer;
   display: flex;
@@ -275,88 +119,230 @@ const ActionButton = styled.button`
   transition: all 0.2s ease;
 
   &:hover {
-    background: rgba(108, 117, 125, 0.2);
-    color: #495057;
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.05);
   }
 `;
 
-const WelcomeMessage = styled.div`
-  background: linear-gradient(135deg, #f8f9ff 0%, #e3f2fd 100%);
-  border: 1px solid rgba(102, 126, 234, 0.1);
-  border-radius: 20px;
-  padding: 28px;
+// 消息容器 - 清爽背景
+const MessagesContainer = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  background: #fafbfc;
+  
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 2px;
+  }
+`;
+
+// 欢迎卡片 - AWS风格
+const WelcomeCard = styled.div`
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 24px;
   margin-bottom: 24px;
   text-align: center;
-  animation: ${slideUp} 0.6s ease-out;
+  animation: ${fadeIn} 0.6s ease-out;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+`;
+
+const WelcomeIcon = styled.div`
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff9900, #ff7700);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  color: white;
 `;
 
 const WelcomeTitle = styled.h3`
-  color: #232F3E;
-  margin: 0 0 12px 0;
-  font-size: 20px;
-  font-weight: 700;
+  color: #111827;
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 600;
 `;
 
 const WelcomeText = styled.p`
-  color: #5a6c7d;
-  margin: 0;
-  font-size: 15px;
-  line-height: 1.6;
+  color: #6b7280;
+  margin: 0 0 20px 0;
+  font-size: 14px;
+  line-height: 1.5;
 `;
 
-const SuggestionsContainer = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+// 建议按钮 - 卡片式
+const SuggestionsGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
   margin-top: 16px;
-  justify-content: center;
 `;
 
-const SuggestionChip = styled.button`
-  background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
-  border: 1px solid #e1e5e9;
-  color: #495057;
-  padding: 10px 18px;
-  border-radius: 25px;
+const SuggestionCard = styled.button`
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  color: #374151;
+  padding: 12px 16px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 13px;
   font-weight: 500;
-  transition: all 0.3s ease;
+  text-align: left;
+  transition: all 0.2s ease;
   
   &:hover {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border-color: #667eea;
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+    background: #f9fafb;
+    border-color: #ff9900;
+    color: #ff9900;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(255, 153, 0, 0.15);
   }
 `;
 
-const TypingIndicator = styled.div`
+// 消息布局
+const MessageGroup = styled.div`
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-direction: ${props => props.isUser ? 'row-reverse' : 'row'};
+  animation: ${bounceIn} 0.3s ease-out;
+`;
+
+const Avatar = styled.div`
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: ${props => props.isUser 
+    ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' 
+    : 'linear-gradient(135deg, #ff9900, #ff7700)'};
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 24px;
-  animation: ${bounceIn} 0.4s ease-out;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+  font-size: 14px;
+`;
+
+const MessageContent = styled.div`
+  flex: 1;
+  max-width: 280px;
+`;
+
+// 消息气泡 - 现代设计
+const MessageBubble = styled.div`
+  background: ${props => props.isUser ? '#3b82f6' : '#ffffff'};
+  color: ${props => props.isUser ? '#ffffff' : '#111827'};
+  padding: 12px 16px;
+  border-radius: ${props => props.isUser 
+    ? '16px 16px 4px 16px' 
+    : '16px 16px 16px 4px'};
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  box-shadow: ${props => props.isUser 
+    ? '0 2px 8px rgba(59, 130, 246, 0.15)' 
+    : '0 1px 3px rgba(0, 0, 0, 0.1)'};
+  border: ${props => props.isUser ? 'none' : '1px solid #e5e7eb'};
+
+  /* 代码样式 */
+  code {
+    background: ${props => props.isUser ? 'rgba(255, 255, 255, 0.2)' : '#f3f4f6'};
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Monaco', 'Consolas', monospace;
+    font-size: 13px;
+  }
+
+  pre {
+    background: ${props => props.isUser ? 'rgba(255, 255, 255, 0.1)' : '#f9fafb'};
+    padding: 12px;
+    border-radius: 6px;
+    margin: 8px 0;
+    font-family: 'Monaco', 'Consolas', monospace;
+    font-size: 13px;
+    overflow-x: auto;
+  }
+`;
+
+const MessageTime = styled.div`
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 4px;
+  text-align: ${props => props.isUser ? 'right' : 'left'};
+`;
+
+// 消息操作按钮
+const MessageActions = styled.div`
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  justify-content: ${props => props.isUser ? 'flex-end' : 'flex-start'};
+
+  ${MessageGroup}:hover & {
+    opacity: 1;
+  }
+`;
+
+const ActionBtn = styled.button`
+  background: #f3f4f6;
+  border: none;
+  color: #6b7280;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #e5e7eb;
+    color: #374151;
+  }
+`;
+
+// 打字指示器
+const TypingIndicator = styled.div`
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  animation: ${bounceIn} 0.3s ease-out;
 `;
 
 const TypingBubble = styled.div`
-  background: white;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  padding: 18px 22px;
-  border-radius: 22px 22px 22px 6px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  padding: 12px 16px;
+  border-radius: 16px 16px 16px 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 `;
 
 const TypingDots = styled.div`
   display: flex;
-  gap: 4px;
+  gap: 3px;
   
   span {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
-    background: #667eea;
+    background: #9ca3af;
     animation: ${typing} 1.4s infinite ease-in-out;
     
     &:nth-child(1) { animation-delay: 0s; }
@@ -365,72 +351,67 @@ const TypingDots = styled.div`
   }
 `;
 
-const InputContainer = styled.div`
-  padding: 24px;
-  background: white;
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
-  border-radius: 0 0 20px 20px;
+// 输入区域
+const InputArea = styled.div`
+  padding: 20px 24px;
+  background: #ffffff;
+  border-top: 1px solid #e5e7eb;
+  border-radius: 0 0 12px 12px;
 `;
 
-const InputWrapper = styled.div`
+const InputContainer = styled.div`
   display: flex;
   gap: 12px;
   align-items: flex-end;
 `;
 
-const TextInput = styled.textarea`
+const InputWrapper = styled.div`
   flex: 1;
-  border: 2px solid #e9ecef;
-  border-radius: 16px;
-  padding: 14px 18px;
+  position: relative;
+`;
+
+const TextInput = styled.textarea`
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 12px 16px;
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.4;
   resize: none;
   outline: none;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   font-family: inherit;
-  max-height: 120px;
-  min-height: 48px;
-  background: linear-gradient(135deg, #fff 0%, #fafbfc 100%);
+  max-height: 100px;
+  min-height: 44px;
+  background: #ffffff;
   
   &:focus {
-    border-color: #667eea;
-    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-    background: white;
+    border-color: #ff9900;
+    box-shadow: 0 0 0 3px rgba(255, 153, 0, 0.1);
   }
   
   &::placeholder {
-    color: #adb5bd;
-  }
-
-  &:disabled {
-    background: #f8f9fa;
-    color: #6c757d;
-    cursor: not-allowed;
+    color: #9ca3af;
   }
 `;
 
 const SendButton = styled.button`
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #ff9900;
   border: none;
   color: white;
-  width: 48px;
-  height: 48px;
-  border-radius: 16px;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+  transition: all 0.2s ease;
   
   &:hover:not(:disabled) {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
-  }
-  
-  &:active:not(:disabled) {
+    background: #e88500;
     transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3);
   }
   
   &:disabled {
@@ -440,56 +421,54 @@ const SendButton = styled.button`
   }
 `;
 
-const ToggleButton = styled.button`
+// 浮动按钮
+const FloatingButton = styled.button`
   position: fixed;
   bottom: 24px;
   right: 24px;
-  width: 60px;
-  height: 60px;
-  background: linear-gradient(135deg, #232F3E 0%, #FF9900 100%);
+  width: 56px;
+  height: 56px;
+  background: #232f3e;
   border: none;
   border-radius: 50%;
   color: white;
   cursor: pointer;
-  box-shadow: 0 8px 32px rgba(35, 47, 62, 0.3);
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 8px 24px rgba(35, 47, 62, 0.25);
+  transition: all 0.3s ease;
   z-index: 1001;
   display: flex;
   align-items: center;
   justify-content: center;
 
   &:hover {
-    transform: scale(1.1) translateY(-3px);
-    box-shadow: 0 16px 48px rgba(35, 47, 62, 0.4);
-  }
-
-  &:active {
-    transform: scale(1.05) translateY(-1px);
+    transform: scale(1.05) translateY(-2px);
+    box-shadow: 0 12px 32px rgba(35, 47, 62, 0.35);
+    background: #1a252f;
   }
 
   @media (max-width: 768px) {
     bottom: 16px;
     right: 16px;
-    width: 56px;
-    height: 56px;
+    width: 52px;
+    height: 52px;
   }
 `;
 
 const NotificationBadge = styled.div`
   position: absolute;
-  top: -4px;
-  right: -4px;
-  background: #ff4757;
+  top: -2px;
+  right: -2px;
+  background: #ef4444;
   color: white;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
-  animation: ${pulse} 2s infinite;
+  border: 2px solid white;
 `;
 
 const AIChat = ({ language = 'zh' }) => {
@@ -509,22 +488,22 @@ const AIChat = ({ language = 'zh' }) => {
   const t = (key) => {
     const translations = {
       en: {
-        title: 'CMDB AI Assistant',
-        welcomeTitle: 'Hi! I\'m your CMDB Assistant',
-        welcomeText: 'I can help you manage assets, workflows, and provide system insights. What would you like to know?',
-        placeholder: 'Type your message...',
+        title: 'CMDB Assistant',
+        welcomeTitle: 'Hi! How can I help you?',
+        welcomeText: 'I can help you manage assets, workflows, and provide system insights.',
+        placeholder: 'Ask me anything...',
         error: 'Connection error. Please try again.',
-        suggestions: ["View all assets", "My workflows", "System statistics", "Help & commands"],
+        suggestions: ["View assets", "My workflows", "System stats", "Help"],
         copied: 'Copied!',
         online: 'Online'
       },
       zh: {
-        title: 'CMDB AI助手',
-        welcomeTitle: '您好！我是您的CMDB助手',
-        welcomeText: '我可以帮助您管理资产、工作流程，并提供系统洞察。您想了解什么？',
-        placeholder: '输入您的消息...',
+        title: 'CMDB 助手',
+        welcomeTitle: '您好！我能为您做些什么？',
+        welcomeText: '我可以帮助您管理资产、工作流程，并提供系统洞察。',
+        placeholder: '请输入您的问题...',
         error: '连接错误，请重试。',
-        suggestions: ["查看所有资产", "我的工作流", "系统统计", "帮助和命令"],
+        suggestions: ["查看资产", "我的工作流", "系统统计", "帮助"],
         copied: '已复制！',
         online: '在线'
       }
@@ -536,8 +515,8 @@ const AIChat = ({ language = 'zh' }) => {
   const adjustTextareaHeight = useCallback(() => {
     const textarea = inputRef.current;
     if (textarea) {
-      textarea.style.height = '48px';
-      textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+      textarea.style.height = '44px';
+      textarea.style.height = Math.min(textarea.scrollHeight, 100) + 'px';
     }
   }, []);
 
@@ -548,24 +527,19 @@ const AIChat = ({ language = 'zh' }) => {
     const diffInMinutes = Math.floor((now - date) / (1000 * 60));
     
     if (diffInMinutes < 1) return language === 'en' ? 'Just now' : '刚刚';
-    if (diffInMinutes < 60) return language === 'en' ? `${diffInMinutes}m ago` : `${diffInMinutes}分钟前`;
-    if (diffInMinutes < 1440) return language === 'en' ? `${Math.floor(diffInMinutes / 60)}h ago` : `${Math.floor(diffInMinutes / 60)}小时前`;
-    return date.toLocaleDateString();
+    if (diffInMinutes < 60) return `${diffInMinutes}${language === 'en' ? 'm' : '分钟'}`;
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  // 复制消息内容
+  // 功能函数
   const copyMessage = (content) => {
-    navigator.clipboard.writeText(content).then(() => {
-      // 可以添加提示
-    });
+    navigator.clipboard.writeText(content);
   };
 
-  // 重新发送消息
   const resendMessage = (content) => {
     sendMessage(content);
   };
 
-  // 朗读消息
   const speakMessage = (content) => {
     if ('speechSynthesis' in window) {
       const utterance = new SpeechSynthesisUtterance(content);
@@ -608,51 +582,22 @@ const AIChat = ({ language = 'zh' }) => {
     setIsLoading(true);
     setIsTyping(true);
 
-    // 模拟打字效果延迟
-    setTimeout(() => setIsTyping(false), 1000 + Math.random() * 2000);
-
-    try {
-      const response = await fetch('/api/ai/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ message: messageText, language }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const aiMessage = {
-          id: Date.now() + 1,
-          content: data.response || '抱歉，我现在无法回答这个问题。',
-          isUser: false,
-          timestamp: new Date().toISOString(),
-          suggestions: data.suggestions
-        };
-        
-        setTimeout(() => {
-          setMessages(prev => [...prev, aiMessage]);
-          if (!isOpen) setUnreadCount(prev => prev + 1);
-        }, 1000);
-      } else {
-        throw new Error('Failed to get response');
-      }
-    } catch (error) {
-      console.error('Chat error:', error);
-      const errorMessage = {
+    // 模拟AI响应
+    setTimeout(() => {
+      setIsTyping(false);
+      const aiMessage = {
         id: Date.now() + 1,
-        content: t('error'),
+        content: `我收到了您的消息："${messageText}"。这是一个模拟回复，实际使用时会连接到真实的AI服务。`,
         isUser: false,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        suggestions: language === 'en' 
+          ? ["Tell me more", "Show examples", "Help"] 
+          : ["了解更多", "显示示例", "帮助"]
       };
-      setTimeout(() => {
-        setMessages(prev => [...prev, errorMessage]);
-      }, 1000);
-    } finally {
-      setTimeout(() => {
-        setIsLoading(false);
-        setIsTyping(false);
-      }, 1000);
-    }
+      setMessages(prev => [...prev, aiMessage]);
+      if (!isOpen) setUnreadCount(prev => prev + 1);
+      setIsLoading(false);
+    }, 1500);
   };
 
   const handleKeyPress = (e) => {
@@ -680,12 +625,12 @@ const AIChat = ({ language = 'zh' }) => {
 
   if (!isOpen) {
     return (
-      <ToggleButton onClick={toggleChat}>
-        <FaRobot size={24} />
+      <FloatingButton onClick={toggleChat}>
+        <FaRobot size={20} />
         {unreadCount > 0 && (
           <NotificationBadge>{unreadCount}</NotificationBadge>
         )}
-      </ToggleButton>
+      </FloatingButton>
     );
   }
 
@@ -694,43 +639,46 @@ const AIChat = ({ language = 'zh' }) => {
       <ChatContainer isExpanded={isExpanded}>
         <ChatHeader>
           <HeaderTitle>
-            <FaRobot size={22} />
+            <FaRobot size={18} />
             {t('title')}
-            <StatusIndicator />
+            <StatusDot />
           </HeaderTitle>
           <HeaderActions>
-            <HeaderButton onClick={toggleExpand} title={isExpanded ? 'Minimize' : 'Expand'}>
-              {isExpanded ? <FaCompress size={16} /> : <FaExpand size={16} />}
+            <HeaderButton onClick={toggleExpand}>
+              {isExpanded ? <FaCompress size={14} /> : <FaExpand size={14} />}
             </HeaderButton>
-            <HeaderButton onClick={toggleChat} title="Close">
-              <FaTimes size={16} />
+            <HeaderButton onClick={toggleChat}>
+              <FaTimes size={14} />
             </HeaderButton>
           </HeaderActions>
         </ChatHeader>
 
         <MessagesContainer>
           {messages.length === 0 && (
-            <WelcomeMessage>
+            <WelcomeCard>
+              <WelcomeIcon>
+                <FaRobot size={20} />
+              </WelcomeIcon>
               <WelcomeTitle>{t('welcomeTitle')}</WelcomeTitle>
               <WelcomeText>{t('welcomeText')}</WelcomeText>
-              <SuggestionsContainer>
+              <SuggestionsGrid>
                 {t('suggestions').map((suggestion, index) => (
-                  <SuggestionChip
+                  <SuggestionCard
                     key={index}
                     onClick={() => handleSuggestionClick(suggestion)}
                   >
                     {suggestion}
-                  </SuggestionChip>
+                  </SuggestionCard>
                 ))}
-              </SuggestionsContainer>
-            </WelcomeMessage>
+              </SuggestionsGrid>
+            </WelcomeCard>
           )}
 
           {messages.map((message) => (
-            <Message key={message.id} isUser={message.isUser}>
-              <MessageAvatar isUser={message.isUser}>
-                {message.isUser ? <FaUser size={18} /> : <FaRobot size={18} />}
-              </MessageAvatar>
+            <MessageGroup key={message.id} isUser={message.isUser}>
+              <Avatar isUser={message.isUser}>
+                {message.isUser ? <FaUser size={14} /> : <FaRobot size={14} />}
+              </Avatar>
               <MessageContent>
                 <MessageBubble isUser={message.isUser}>
                   {message.content}
@@ -739,50 +687,41 @@ const AIChat = ({ language = 'zh' }) => {
                   {formatTime(message.timestamp)}
                 </MessageTime>
                 <MessageActions isUser={message.isUser}>
-                  <ActionButton 
-                    onClick={() => copyMessage(message.content)}
-                    title={t('copied')}
-                  >
-                    <FaCopy size={12} />
-                  </ActionButton>
+                  <ActionBtn onClick={() => copyMessage(message.content)}>
+                    <FaCopy size={10} />
+                  </ActionBtn>
                   {!message.isUser && (
-                    <ActionButton 
-                      onClick={() => speakMessage(message.content)}
-                      title="Read aloud"
-                    >
-                      <FaVolumeUp size={12} />
-                    </ActionButton>
+                    <ActionBtn onClick={() => speakMessage(message.content)}>
+                      <FaVolumeUp size={10} />
+                    </ActionBtn>
                   )}
                   {message.isUser && (
-                    <ActionButton 
-                      onClick={() => resendMessage(message.content)}
-                      title="Resend"
-                    >
-                      <FaRedo size={12} />
-                    </ActionButton>
+                    <ActionBtn onClick={() => resendMessage(message.content)}>
+                      <FaRedo size={10} />
+                    </ActionBtn>
                   )}
                 </MessageActions>
-                {message.suggestions && message.suggestions.length > 0 && (
-                  <SuggestionsContainer style={{ marginTop: '12px', justifyContent: message.isUser ? 'flex-end' : 'flex-start' }}>
+                {message.suggestions && (
+                  <SuggestionsGrid style={{ marginTop: '8px' }}>
                     {message.suggestions.map((suggestion, index) => (
-                      <SuggestionChip
+                      <SuggestionCard
                         key={index}
                         onClick={() => handleSuggestionClick(suggestion)}
                       >
                         {suggestion}
-                      </SuggestionChip>
+                      </SuggestionCard>
                     ))}
-                  </SuggestionsContainer>
+                  </SuggestionsGrid>
                 )}
               </MessageContent>
-            </Message>
+            </MessageGroup>
           ))}
 
           {isTyping && (
             <TypingIndicator>
-              <MessageAvatar isUser={false}>
-                <FaRobot size={18} />
-              </MessageAvatar>
+              <Avatar isUser={false}>
+                <FaRobot size={14} />
+              </Avatar>
               <TypingBubble>
                 <TypingDots>
                   <span></span>
@@ -796,31 +735,32 @@ const AIChat = ({ language = 'zh' }) => {
           <div ref={messagesEndRef} />
         </MessagesContainer>
 
-        <InputContainer>
-          <InputWrapper>
-            <TextInput
-              ref={inputRef}
-              value={currentMessage}
-              onChange={handleInputChange}
-              onKeyPress={handleKeyPress}
-              placeholder={t('placeholder')}
-              disabled={isLoading}
-              rows={1}
-            />
+        <InputArea>
+          <InputContainer>
+            <InputWrapper>
+              <TextInput
+                ref={inputRef}
+                value={currentMessage}
+                onChange={handleInputChange}
+                onKeyPress={handleKeyPress}
+                placeholder={t('placeholder')}
+                disabled={isLoading}
+                rows={1}
+              />
+            </InputWrapper>
             <SendButton 
               onClick={() => sendMessage()}
               disabled={!currentMessage.trim() || isLoading}
-              title="Send message"
             >
-              <FaPaperPlane size={18} />
+              <FaPaperPlane size={16} />
             </SendButton>
-          </InputWrapper>
-        </InputContainer>
+          </InputContainer>
+        </InputArea>
       </ChatContainer>
       
-      <ToggleButton onClick={toggleChat}>
-        <FaChevronUp size={24} />
-      </ToggleButton>
+      <FloatingButton onClick={toggleChat}>
+        <FaMinus size={16} />
+      </FloatingButton>
     </>
   );
 };
