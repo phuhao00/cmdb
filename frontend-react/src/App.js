@@ -46,22 +46,33 @@ const ProtectedRoute = ({ children }) => {
 const AppLayout = () => {
   const { user } = useAuth();
   const [currentPage, setCurrentPage] = useState('dashboard');
+  const [language, setLanguage] = useState('zh'); // 添加语言状态
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
   };
 
+  const handleLanguageChange = (lang) => {
+    setLanguage(lang);
+  };
+
   return (
     <MainContent>
-      <Header user={user} onPageChange={handlePageChange} currentPage={currentPage} />
+      <Header 
+        user={user} 
+        onPageChange={handlePageChange} 
+        currentPage={currentPage}
+        language={language}
+        onLanguageChange={handleLanguageChange}
+      />
       <Routes>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/assets" element={<Assets />} />
-        <Route path="/workflows" element={<Workflows />} />
-        <Route path="/reports" element={<Reports />} />
+        <Route path="/dashboard" element={<Dashboard language={language} />} />
+        <Route path="/assets" element={<Assets language={language} />} />
+        <Route path="/workflows" element={<Workflows language={language} />} />
+        <Route path="/reports" element={<Reports language={language} />} />
       </Routes>
-      <AIChat />
+      <AIChat language={language} />
     </MainContent>
   );
 };

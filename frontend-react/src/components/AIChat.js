@@ -231,18 +231,47 @@ const LoadingDots = styled.div`
   }
 `;
 
-const AIChat = () => {
+const AIChat = ({ language = 'zh' }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      content: "🤖 您好！我是CMDB智能助手，可以帮助您查询资产信息、工作流状态等。\n\n试试问我：\n• 查看所有资产\n• 我的工作流\n• 系统统计\n• 帮助",
-      isUser: false,
-      timestamp: new Date().toISOString(),
-      suggestions: ["查看所有资产", "我的工作流", "系统统计", "帮助"]
+  
+  // 翻译函数
+  const t = (key) => {
+    const translations = {
+      en: {
+        title: 'CMDB AI Assistant',
+        error: 'Connection error, please check your network and try again.'
+      },
+      zh: {
+        title: 'CMDB AI助手',
+        error: '连接出现问题，请检查网络连接后重试。'
+      }
+    };
+    return translations[language][key] || translations['zh'][key];
+  };
+  
+  // 简单的翻译支持
+  const getInitialMessage = (lang) => {
+    if (lang === 'en') {
+      return {
+        id: 1,
+        content: "🤖 Hello! I'm the CMDB AI Assistant. I can help you query asset information, workflow status, etc.\n\nTry asking me:\n• View all assets\n• My workflows\n• System statistics\n• Help",
+        isUser: false,
+        timestamp: new Date().toISOString(),
+        suggestions: ["View all assets", "My workflows", "System statistics", "Help"]
+      };
+    } else {
+      return {
+        id: 1,
+        content: "🤖 您好！我是CMDB智能助手，可以帮助您查询资产信息、工作流状态等。\n\n试试问我：\n• 查看所有资产\n• 我的工作流\n• 系统统计\n• 帮助",
+        isUser: false,
+        timestamp: new Date().toISOString(),
+        suggestions: ["查看所有资产", "我的工作流", "系统统计", "帮助"]
+      };
     }
-  ]);
+  };
+
+  const [messages, setMessages] = useState([getInitialMessage(language)]);
   const [currentMessage, setCurrentMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
@@ -264,6 +293,11 @@ const AIChat = () => {
     }
   }, [isOpen]);
 
+  // 当语言改变时更新初始消息
+  useEffect(() => {
+    setMessages([getInitialMessage(language)]);
+  }, [language]);
+
   const loadSuggestions = async () => {
     try {
       const response = await fetch('/api/ai/suggestions', {
@@ -282,12 +316,12 @@ const AIChat = () => {
     }
   };
 
-  const sendMessage = async (message = currentMessage) => {
-    if (!message.trim() || isLoading) return;
+  const sendMessage = async (messageText = currentMessage) => {
+    if (!messageText.trim() || isLoading) return;
 
     const userMessage = {
       id: Date.now(),
-      content: message,
+      content: messageText,
       isUser: true,
       timestamp: new Date().toISOString()
     };
@@ -304,7 +338,7 @@ const AIChat = () => {
           'Authorization': `Bearer ${token}`,
         },
         credentials: 'include',
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ message: messageText }),
       });
 
       if (response.ok) {
@@ -331,7 +365,7 @@ const AIChat = () => {
       console.error('Chat error:', error);
       const errorMessage = {
         id: Date.now() + 1,
-        content: "连接出现问题，请检查网络连接后重试。",
+        content: t('error'),
         isUser: false,
         timestamp: new Date().toISOString()
       };
@@ -374,7 +408,7 @@ const AIChat = () => {
         <ChatHeader>
           <HeaderTitle>
             <FaRobot />
-            CMDB AI助手
+            {t('title')}
           </HeaderTitle>
           <HeaderActions>
             <HeaderButton onClick={toggleExpand}>

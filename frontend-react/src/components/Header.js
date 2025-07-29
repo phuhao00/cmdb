@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FaServer, FaTasks, FaChartBar, FaDatabase, FaUser, FaSignOutAlt, FaCog, FaShieldAlt } from 'react-icons/fa';
+import { FaServer, FaTasks, FaChartBar, FaDatabase, FaUser, FaSignOutAlt, FaCog, FaShieldAlt, FaGlobe } from 'react-icons/fa';
 import { useAuth } from './AuthContext';
 
 const HeaderContainer = styled.header`
@@ -164,17 +164,76 @@ const MenuItem = styled.button`
   }
 `;
 
-const Header = () => {
+const LanguageButton = styled.button`
+  background: none;
+  border: none;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+  
+  @media (max-width: 768px) {
+    span {
+      display: none;
+    }
+  }
+`;
+
+// 翻译对象
+const translations = {
+  en: {
+    title: 'CMDB System',
+    dashboard: 'Dashboard',
+    assets: 'Asset Management',
+    workflows: 'Workflows',
+    reports: 'Reports',
+    admin: 'Administrator',
+    manager: 'Manager',
+    operator: 'Operator',
+    viewer: 'Viewer',
+    settings: 'Personal Settings',
+    userManagement: 'User Management',
+    logout: 'Logout',
+    language: 'Language'
+  },
+  zh: {
+    title: 'CMDB 系统',
+    dashboard: '仪表板',
+    assets: '资产管理',
+    workflows: '工作流',
+    reports: '报告',
+    admin: '管理员',
+    manager: '经理',
+    operator: '操作员',
+    viewer: '查看者',
+    settings: '个人设置',
+    userManagement: '用户管理',
+    logout: '退出登录',
+    language: '语言'
+  }
+};
+
+const Header = ({ language = 'zh', onLanguageChange }) => {
   const { user, logout, hasPermission } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [showUserMenu, setShowUserMenu] = useState(false);
 
+  const t = (key) => translations[language][key] || translations['en'][key];
+
   const navItems = [
-    { id: 'dashboard', label: '仪表板', icon: FaChartBar, path: '/dashboard' },
-    { id: 'assets', label: '资产管理', icon: FaServer, path: '/assets', permission: { resource: 'assets', action: 'read' } },
-    { id: 'workflows', label: '工作流', icon: FaTasks, path: '/workflows', permission: { resource: 'workflows', action: 'read' } },
-    { id: 'reports', label: '报告', icon: FaDatabase, path: '/reports', permission: { resource: 'reports', action: 'read' } },
+    { id: 'dashboard', label: t('dashboard'), icon: FaChartBar, path: '/dashboard' },
+    { id: 'assets', label: t('assets'), icon: FaServer, path: '/assets', permission: { resource: 'assets', action: 'read' } },
+    { id: 'workflows', label: t('workflows'), icon: FaTasks, path: '/workflows', permission: { resource: 'workflows', action: 'read' } },
+    { id: 'reports', label: t('reports'), icon: FaDatabase, path: '/reports', permission: { resource: 'reports', action: 'read' } },
   ];
 
   const handleNavigation = (item) => {
@@ -191,14 +250,19 @@ const Header = () => {
     setShowUserMenu(!showUserMenu);
   };
 
+  const handleLanguageToggle = () => {
+    const newLanguage = language === 'zh' ? 'en' : 'zh';
+    onLanguageChange(newLanguage);
+  };
+
   const getRoleDisplayName = (role) => {
-    const roleNames = {
-      admin: '管理员',
-      manager: '经理',
-      operator: '操作员',
-      viewer: '查看者'
+    const roleKeys = {
+      admin: 'admin',
+      manager: 'manager',
+      operator: 'operator',
+      viewer: 'viewer'
     };
-    return roleNames[role] || role;
+    return t(roleKeys[role]) || role;
   };
 
   // Filter navigation items based on permissions
@@ -211,7 +275,7 @@ const Header = () => {
       <HeaderContent>
         <Logo>
           <FaDatabase />
-          <span>CMDB 系统</span>
+          <span>{t('title')}</span>
         </Logo>
         
         <Navigation>
@@ -232,6 +296,11 @@ const Header = () => {
         </Navigation>
 
         <UserSection>
+          <LanguageButton onClick={handleLanguageToggle}>
+            <FaGlobe />
+            <span>{language === 'zh' ? '中文' : 'EN'}</span>
+          </LanguageButton>
+          
           <UserInfo onClick={toggleUserMenu}>
             <FaUser />
             <span>{user?.fullName || user?.username}</span>
@@ -242,17 +311,17 @@ const Header = () => {
             <UserMenu>
               <MenuItem onClick={() => setShowUserMenu(false)}>
                 <FaCog />
-                个人设置
+                {t('settings')}
               </MenuItem>
               {user?.role === 'admin' && (
                 <MenuItem onClick={() => setShowUserMenu(false)}>
                   <FaShieldAlt />
-                  用户管理
+                  {t('userManagement')}
                 </MenuItem>
               )}
               <MenuItem className="danger" onClick={handleLogout}>
                 <FaSignOutAlt />
-                退出登录
+                {t('logout')}
               </MenuItem>
             </UserMenu>
           )}
