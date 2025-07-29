@@ -2,6 +2,12 @@
 
 A modern Configuration Management Database system for tracking IT assets and integrating approval workflows, specifically designed for IDC (Internet Data Center) and data center operations.
 
+## Screenshots
+
+![CMDB System Interface](im.png)
+
+*CMDB system dashboard showing asset management, workflows, and monitoring capabilities*
+
 ## Features
 
 ### Asset Management
