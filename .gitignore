@@ -35,3 +35,9 @@ npm-debug.log*
 .npm
 # Testing
 coverage/
+# Go binaries
+backend/cmdb-api
+# Cursor IDE
+.cursor/
+# Temporary files
+tatus
