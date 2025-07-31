@@ -17,6 +17,7 @@ type AIService struct {
 	assetService    *AssetService
 	workflowService *WorkflowService
 	userRepo        repository.UserRepository
+	zhipuService    *ZhipuService
 }
 
 // NewAIService creates a new AI service
@@ -25,6 +26,7 @@ func NewAIService(assetService *AssetService, workflowService *WorkflowService, 
 		assetService:    assetService,
 		workflowService: workflowService,
 		userRepo:        userRepo,
+		zhipuService:    NewZhipuService(),
 	}
 }
 
@@ -51,29 +53,63 @@ type AIResponse struct {
 }
 
 // ProcessQuery processes a natural language query and returns an AI response
-func (s *AIService) ProcessQuery(ctx context.Context, userID string, query string, userPermissions []model.Permission) (*AIResponse, error) {
-	// Analyze the intent of the query
+func (s *AIService) ProcessQuery(ctx context.Context, userID string, query string, language string, userPermissions []model.Permission) (*AIResponse, error) {
+	// First, try to get AI response using Zhipu AI
+	zhipuRequest := ChatRequest{
+		Message:  query,
+		Language: language,
+	}
+
+	zhipuResponse, err := s.zhipuService.Chat(zhipuRequest)
+	if err != nil {
+		// Fallback to rule-based system if Zhipu AI fails
+		return s.handleWithRules(ctx, userID, query, language, userPermissions)
+	}
+
+	// Check if the query requires specific data from our system
 	intent := s.analyzeIntent(query)
 
-	// Process based on intent
+	// For data-specific queries, get the data and enhance the AI response
 	switch intent {
 	case QueryAssets:
-		return s.handleAssetQuery(ctx, query, userPermissions)
+		dataResponse, dataErr := s.handleAssetQuery(ctx, query, userPermissions)
+		if dataErr == nil && dataResponse.Data != nil {
+			// Combine AI response with actual data
+			return s.combineAIWithData(zhipuResponse, dataResponse, language), nil
+		}
 	case QueryWorkflows:
-		return s.handleWorkflowQuery(ctx, query, userID, userPermissions)
+		dataResponse, dataErr := s.handleWorkflowQuery(ctx, query, userID, userPermissions)
+		if dataErr == nil && dataResponse.Data != nil {
+			return s.combineAIWithData(zhipuResponse, dataResponse, language), nil
+		}
 	case QueryStats:
-		return s.handleStatsQuery(ctx, userPermissions)
+		dataResponse, dataErr := s.handleStatsQuery(ctx, userPermissions)
+		if dataErr == nil && dataResponse.Data != nil {
+			return s.combineAIWithData(zhipuResponse, dataResponse, language), nil
+		}
 	case QueryAssetDetails:
-		return s.handleAssetDetailsQuery(ctx, query, userPermissions)
+		dataResponse, dataErr := s.handleAssetDetailsQuery(ctx, query, userPermissions)
+		if dataErr == nil && dataResponse.Data != nil {
+			return s.combineAIWithData(zhipuResponse, dataResponse, language), nil
+		}
 	case QueryUserInfo:
-		return s.handleUserInfoQuery(ctx, userID)
+		dataResponse, dataErr := s.handleUserInfoQuery(ctx, userID)
+		if dataErr == nil && dataResponse.Data != nil {
+			return s.combineAIWithData(zhipuResponse, dataResponse, language), nil
+		}
 	case QuerySystemStatus:
-		return s.handleSystemStatusQuery(ctx, userPermissions)
-	case QueryHelp:
-		return s.handleHelpQuery(), nil
-	default:
-		return s.handleUnknownQuery(query), nil
+		dataResponse, dataErr := s.handleSystemStatusQuery(ctx, userPermissions)
+		if dataErr == nil && dataResponse.Data != nil {
+			return s.combineAIWithData(zhipuResponse, dataResponse, language), nil
+		}
 	}
+
+	// For general queries, return enhanced AI response
+	return &AIResponse{
+		Message:     zhipuResponse.Response,
+		Intent:      intent,
+		Suggestions: zhipuResponse.Suggestions,
+	}, nil
 }
 
 // analyzeIntent analyzes the user's query to determine the intent
@@ -604,4 +640,79 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// handleWithRules handles queries using the original rule-based system as fallback
+func (s *AIService) handleWithRules(ctx context.Context, userID string, query string, language string, userPermissions []model.Permission) (*AIResponse, error) {
+	// Analyze the intent of the query
+	intent := s.analyzeIntent(query)
+
+	// Process based on intent
+	switch intent {
+	case QueryAssets:
+		return s.handleAssetQuery(ctx, query, userPermissions)
+	case QueryWorkflows:
+		return s.handleWorkflowQuery(ctx, query, userID, userPermissions)
+	case QueryStats:
+		return s.handleStatsQuery(ctx, userPermissions)
+	case QueryAssetDetails:
+		return s.handleAssetDetailsQuery(ctx, query, userPermissions)
+	case QueryUserInfo:
+		return s.handleUserInfoQuery(ctx, userID)
+	case QuerySystemStatus:
+		return s.handleSystemStatusQuery(ctx, userPermissions)
+	case QueryHelp:
+		return s.handleHelpQuery(), nil
+	default:
+		return s.handleUnknownQuery(query), nil
+	}
+}
+
+// combineAIWithData combines Zhipu AI response with actual system data
+func (s *AIService) combineAIWithData(aiResponse *ChatResponse, dataResponse *AIResponse, language string) *AIResponse {
+	// Create enhanced message combining AI insight with real data
+	var combinedMessage string
+
+	if language == "en" {
+		combinedMessage = fmt.Sprintf("%s\n\n📊 **Current Data:**\n%s",
+			aiResponse.Response,
+			dataResponse.Message)
+	} else {
+		combinedMessage = fmt.Sprintf("%s\n\n📊 **实时数据：**\n%s",
+			aiResponse.Response,
+			dataResponse.Message)
+	}
+
+	// Combine suggestions from both AI and data responses
+	combinedSuggestions := make([]string, 0)
+
+	// Add AI suggestions first
+	combinedSuggestions = append(combinedSuggestions, aiResponse.Suggestions...)
+
+	// Add data-specific suggestions
+	for _, suggestion := range dataResponse.Suggestions {
+		// Avoid duplicates
+		found := false
+		for _, existing := range combinedSuggestions {
+			if existing == suggestion {
+				found = true
+				break
+			}
+		}
+		if !found {
+			combinedSuggestions = append(combinedSuggestions, suggestion)
+		}
+	}
+
+	// Limit to max 6 suggestions
+	if len(combinedSuggestions) > 6 {
+		combinedSuggestions = combinedSuggestions[:6]
+	}
+
+	return &AIResponse{
+		Message:     combinedMessage,
+		Intent:      dataResponse.Intent,
+		Data:        dataResponse.Data,
+		Suggestions: combinedSuggestions,
+	}
 }

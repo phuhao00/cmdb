@@ -22,7 +22,8 @@ func NewAIApplication(aiService *service.AIService) *AIApplication {
 
 // ChatRequest represents a chat request from the user
 type ChatRequest struct {
-	Message string `json:"message" binding:"required"`
+	Message  string `json:"message" binding:"required"`
+	Language string `json:"language,omitempty"`
 }
 
 // ChatResponse represents a chat response to the user
@@ -39,8 +40,14 @@ func (a *AIApplication) ProcessChat(ctx context.Context, userID string, userPerm
 	// Convert UserPermission to domain Permission
 	permissions := convertToModelPermissions(userPermissions)
 
+	// Set default language if not provided
+	language := request.Language
+	if language == "" {
+		language = "zh"
+	}
+
 	// Process the query using AI service
-	response, err := a.aiService.ProcessQuery(ctx, userID, request.Message, permissions)
+	response, err := a.aiService.ProcessQuery(ctx, userID, request.Message, language, permissions)
 	if err != nil {
 		return nil, err
 	}

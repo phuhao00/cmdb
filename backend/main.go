@@ -80,11 +80,37 @@ func main() {
 		// Public auth routes
 		authHandler.RegisterRoutes(api)
 
+		// Temporary AI test route (no auth required)
+		api.POST("/ai/test", func(c *gin.Context) {
+			var req application.ChatRequest
+			if err := c.ShouldBindJSON(&req); err != nil {
+				c.JSON(400, gin.H{"error": "Invalid request format"})
+				return
+			}
+
+			// Use test user permissions for AI testing
+			testPermissions := []application.UserPermission{
+				{Resource: "*", Actions: []string{"*"}},
+			}
+
+			// Call AI service with test user
+			response, err := aiApp.ProcessChat(c.Request.Context(), "test-user", testPermissions, req)
+			if err != nil {
+				c.JSON(500, gin.H{"error": err.Error()})
+				return
+			}
+
+			c.JSON(200, response)
+		})
+
 		// Protected routes
 		protected := api.Group("/")
 		protected.Use(authMiddleware.RequireAuth())
 		{
-			// AI routes
+			// Protected auth routes (me, logout, change-password, user management)
+			authHandler.RegisterProtectedRoutes(protected)
+
+			// AI routes - ensure they're properly protected
 			aiHandler.RegisterRoutes(protected)
 
 			// Asset routes with permission checks

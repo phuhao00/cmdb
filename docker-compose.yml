@@ -44,6 +44,7 @@ services:
       GOPROXY: https://goproxy.cn,direct
       GOSUMDB: sum.golang.google.cn
       GO111MODULE: on
+      ZHIPU_API_KEY: 3f80d61514734e559aa6c3037fcc7bd4.WkK0ulstSY0j89CU
     depends_on:
       - mongodb
       - consul
@@ -59,8 +60,15 @@ services:
     ports:
       - "3000:3000"
     environment:
+      # 后端服务配置
       BACKEND_HOST: cmdb-api
       BACKEND_PORT: 8081
+      # React 前端API配置 (构建时使用)
+      REACT_APP_API_BASE_URL: http://localhost:8081/api/v1
+      REACT_APP_AI_API_BASE_URL: http://localhost:8081/api
+      REACT_APP_API_TIMEOUT: 10000
+      REACT_APP_AI_API_TIMEOUT: 30000
+      REACT_APP_DEBUG_MODE: true
     depends_on:
       - cmdb-api
     networks:

@@ -20,11 +20,18 @@ func NewAuthHandler(authApp *application.AuthApplication) *AuthHandler {
 	}
 }
 
-// RegisterRoutes registers the auth routes
+// RegisterRoutes registers the public auth routes (login only)
 func (h *AuthHandler) RegisterRoutes(router *gin.RouterGroup) {
 	auth := router.Group("/auth")
 	{
 		auth.POST("/login", h.Login)
+	}
+}
+
+// RegisterProtectedRoutes registers the protected auth routes (require authentication)
+func (h *AuthHandler) RegisterProtectedRoutes(router *gin.RouterGroup) {
+	auth := router.Group("/auth")
+	{
 		auth.POST("/logout", h.Logout)
 		auth.GET("/me", h.GetCurrentUser)
 		auth.POST("/change-password", h.ChangePassword)

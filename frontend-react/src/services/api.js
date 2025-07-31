@@ -1,13 +1,29 @@
 import axios from 'axios';
+import apiConfig from '../config/api';
 
-// API Configuration
-const API_BASE_URL = `${window.location.protocol}//${window.location.hostname}:8081/api/v1`;
+// API Configuration - 从配置文件获取
+const API_BASE_URL = apiConfig.API_BASE_URL;
+const AI_API_BASE_URL = apiConfig.AI_API_BASE_URL;
 
 // Create axios instance
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: apiConfig.API_TIMEOUT,
 });
+
+// Add request interceptor to include auth token
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 // Assets API
 export const fetchAssets = () => {
@@ -82,4 +98,92 @@ export const fetchLifecycleReport = () => {
 
 export const fetchComplianceReport = () => {
   return apiClient.get('/reports/compliance');
+};
+
+// Create AI API client
+const aiApiClient = axios.create({
+  baseURL: AI_API_BASE_URL,
+  timeout: apiConfig.AI_API_TIMEOUT,
+});
+
+// Add AI API interceptor for auth
+aiApiClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// AI API - 直接使用通用的apiClient而不是aiApiClient
+export const sendChatMessage = async (message, language = 'zh') => {
+  try {
+    // 检查token - 使用正确的key
+    const token = localStorage.getItem('auth_token');
+    console.log('🤖 调用AI API:', message, language);
+    console.log('🔑 Token存在:', !!token);
+    console.log('🔑 Token内容:', token);
+    
+    // 如果没有token，提示用户重新登录
+    if (!token) {
+      throw new Error('请先登录系统');
+    }
+    
+    // 使用通用apiClient并手动设置完整URL和headers
+    const response = await axios.post('/api/ai/chat', {
+      message: message,
+      language: language
+    }, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      timeout: 30000
+    });
+    
+    console.log('✅ AI API 响应:', response.data);
+    return response;
+    
+  } catch (error) {
+    console.error('❌ AI API 错误:', error);
+    console.error('❌ 错误详情:', error.response?.data);
+    console.error('❌ 错误状态:', error.response?.status);
+    
+    // 如果是401错误，提示重新登录
+    if (error.response?.status === 401) {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user');
+      throw new Error('登录已过期，请重新登录');
+    }
+    
+    throw error;
+  }
+};
+
+export const getAISuggestions = () => {
+  return aiApiClient.get('/ai/suggestions');
+};
+
+// Test AI API (no auth required)
+export const testAIChat = async (message, language = 'zh') => {
+  try {
+    console.log('🧪 测试AI API (无认证):', message);
+    
+    const response = await apiClient.post('/ai/test', {
+      message: message,
+      language: language
+    });
+    
+    console.log('✅ AI测试成功:', response.data);
+    return response;
+    
+  } catch (error) {
+    console.error('❌ AI测试失败:', error);
+    throw error;
+  }
 };

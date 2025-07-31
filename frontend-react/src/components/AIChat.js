@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import styled, { keyframes, css } from 'styled-components';
 import { FaPaperPlane, FaRobot, FaUser, FaTimes, FaExpand, FaCompress, FaChevronUp, FaCopy, FaRedo, FaVolumeUp, FaMinus } from 'react-icons/fa';
 import { useAuth } from './AuthContext';
+import { sendChatMessage, testAIChat } from '../services/api';
 
 // 动画定义
 const slideUp = keyframes`
@@ -582,22 +583,43 @@ const AIChat = ({ language = 'zh' }) => {
     setIsLoading(true);
     setIsTyping(true);
 
-    // 模拟AI响应
-    setTimeout(() => {
+    try {
+      // 调用真实的AI API
+      const response = await sendChatMessage(messageText, language);
+      
       setIsTyping(false);
       const aiMessage = {
         id: Date.now() + 1,
-        content: `我收到了您的消息："${messageText}"。这是一个模拟回复，实际使用时会连接到真实的AI服务。`,
+        content: response.data.message, // 修复：使用正确的字段名
         isUser: false,
         timestamp: new Date().toISOString(),
-        suggestions: language === 'en' 
+        suggestions: response.data.suggestions || (language === 'en' 
           ? ["Tell me more", "Show examples", "Help"] 
-          : ["了解更多", "显示示例", "帮助"]
+          : ["了解更多", "显示示例", "帮助"])
       };
       setMessages(prev => [...prev, aiMessage]);
       if (!isOpen) setUnreadCount(prev => prev + 1);
+    } catch (error) {
+      console.error('AI API Error:', error);
+      setIsTyping(false);
+      
+      // 如果API调用失败，显示错误信息
+      const errorMessage = {
+        id: Date.now() + 1,
+        content: language === 'en' 
+          ? `Sorry, I'm having trouble connecting to the AI service. Please try again later. Error: ${error.response?.data?.error || error.message}`
+          : `抱歉，AI服务连接出现问题，请稍后重试。错误：${error.response?.data?.error || error.message}`,
+        isUser: false,
+        timestamp: new Date().toISOString(),
+        suggestions: language === 'en' 
+          ? ["Try again", "Help", "Contact support"] 
+          : ["重试", "帮助", "联系支持"]
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      if (!isOpen) setUnreadCount(prev => prev + 1);
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   const handleKeyPress = (e) => {
