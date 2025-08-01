@@ -1,8 +1,33 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+'use client';
 
-const AuthContext = createContext();
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-export const useAuth = () => {
+interface User {
+  id: string;
+  username: string;
+  email: string;
+  fullName: string;
+  role: string;
+  permissions?: Array<{
+    resource: string;
+    actions: string[];
+  }>;
+}
+
+interface AuthContextType {
+  user: User | null;
+  token: string | null;
+  loading: boolean;
+  login: (userData: User, authToken: string) => void;
+  logout: () => Promise<void>;
+  hasPermission: (resource: string, action: string) => boolean;
+  canApprove: () => boolean;
+  isAuthenticated: () => boolean;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
@@ -10,10 +35,14 @@ export const useAuth = () => {
   return context;
 };
 
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
-  const [loading, setLoading] = useState(true);
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     // Check for existing auth data on mount
@@ -22,7 +51,7 @@ export const AuthProvider = ({ children }) => {
 
     if (savedToken && savedUser) {
       try {
-        const userData = JSON.parse(savedUser);
+        const userData: User = JSON.parse(savedUser);
         setToken(savedToken);
         setUser(userData);
         
@@ -35,9 +64,10 @@ export const AuthProvider = ({ children }) => {
     }
     
     setLoading(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const verifyToken = async (authToken) => {
+  const verifyToken = async (authToken: string): Promise<void> => {
     try {
       const response = await fetch('/api/auth/me', {
         headers: {
@@ -55,14 +85,14 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const login = (userData, authToken) => {
+  const login = (userData: User, authToken: string): void => {
     setUser(userData);
     setToken(authToken);
     localStorage.setItem('auth_token', authToken);
     localStorage.setItem('user', JSON.stringify(userData));
   };
 
-  const logout = async () => {
+  const logout = async (): Promise<void> => {
     try {
       // Notify server about logout
       await fetch('/api/auth/logout', {
@@ -83,7 +113,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('user');
   };
 
-  const hasPermission = (resource, action) => {
+  const hasPermission = (resource: string, action: string): boolean => {
     if (!user) return false;
     
     // Admin has all permissions
@@ -93,18 +123,18 @@ export const AuthProvider = ({ children }) => {
     return user.permissions?.some(perm => 
       (perm.resource === resource || perm.resource === '*') &&
       (perm.actions.includes(action) || perm.actions.includes('*'))
-    );
+    ) || false;
   };
 
-  const canApprove = () => {
-    return user && (user.role === 'admin' || user.role === 'manager');
+  const canApprove = (): boolean => {
+    return !!(user && (user.role === 'admin' || user.role === 'manager'));
   };
 
-  const isAuthenticated = () => {
+  const isAuthenticated = (): boolean => {
     return !!(user && token);
   };
 
-  const value = {
+  const value: AuthContextType = {
     user,
     token,
     loading,
@@ -120,4 +150,4 @@ export const AuthProvider = ({ children }) => {
       {children}
     </AuthContext.Provider>
   );
-}; 
+};
