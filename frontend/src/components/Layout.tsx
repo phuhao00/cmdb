@@ -52,3 +52,5 @@ export function Layout({ children, breadcrumbs, title }: LayoutProps) {
     </div>
   );
 }
+
+export default Layout;

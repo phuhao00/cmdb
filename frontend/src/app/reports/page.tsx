@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Layout } from '@/components/Layout';
 import { 
   Download, 
@@ -538,13 +539,13 @@ export default function ReportsPage() {
                 系统中还没有任何资产数据。请先添加资产后再生成报告。
               </p>
               <div className="mt-6">
-                <a
+                <Link
                   href="/assets"
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
                 >
                   <Package className="w-4 h-4 mr-2" />
                   前往资产管理
-                </a>
+                </Link>
               </div>
             </div>
           </div>

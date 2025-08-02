@@ -151,23 +151,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           </button>
         </div>
 
-        {/* 用户信息 */}
-        <div className="p-4 border-b border-gray-200">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
-              <User className="w-5 h-5 text-gray-600" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">
-                {user?.username || 'Unknown'}
-              </p>
-              <p className="text-xs text-gray-500 truncate">
-                {user?.role || 'User'}
-              </p>
-            </div>
-          </div>
-        </div>
-
         {/* 导航菜单 */}
         <nav className="flex-1 px-4 py-4 space-y-1">
           {navigationItems.map((item) => {

@@ -49,8 +49,9 @@ export default function AssetSearch({ onSearch }: AssetSearchProps) {
     const criteria = { ...searchCriteria };
     // Remove empty fields
     Object.keys(criteria).forEach(key => {
-      if (!criteria[key] || (Array.isArray(criteria[key]) && criteria[key].length === 0)) {
-        delete criteria[key];
+      const k = key as keyof typeof criteria;
+      if (!criteria[k] || (Array.isArray(criteria[k]) && criteria[k].length === 0)) {
+        delete criteria[k];
       }
     });
     onSearch(criteria);

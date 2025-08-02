@@ -45,9 +45,9 @@ export default function AssetImportExport() {
       
       const response = await apiService.importAssets(formData);
       setImportResult({
-        success: response.success || 0,
-        failed: response.failed || 0,
-        errors: response.errors || [],
+        success: response.data.success || 0,
+        failed: response.data.failed || 0,
+        errors: response.data.errors || [],
       });
     } catch (error) {
       console.error('Import failed:', error);
@@ -64,19 +64,18 @@ export default function AssetImportExport() {
   const handleExport = async () => {
     setExporting(true);
     try {
-      const params = {
-        format: exportFormat,
-        ...exportFilters,
-      };
+      let response;
+      let blob;
       
-      const response = await apiService.exportAssets(params);
-      
-      // Create download link
-      const blob = new Blob([response.data], {
-        type: exportFormat === 'excel' 
-          ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-          : 'text/csv',
-      });
+      if (exportFormat === 'csv') {
+        response = await apiService.exportAssetsCSV();
+        blob = response.data;
+      } else {
+        response = await apiService.exportAssets(exportFormat);
+        blob = new Blob([JSON.stringify(response.data)], {
+          type: 'application/json',
+        });
+      }
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -299,7 +298,7 @@ Web服务器-01,server,online,北京数据中心,生产环境Web服务器,IT部�
               <li>资产名称、类型、状态和位置为必填字段</li>
               <li>类型可选值：server, workstation, storage, network</li>
               <li>状态可选值：online, offline, maintenance, decommissioned</li>
-              <li>标签请用逗号分隔，如："生产,关键,数据库"</li>
+              <li>标签请用逗号分隔，如：&ldquo;生产,关键,数据库&rdquo;</li>
               <li>日期格式：YYYY-MM-DD</li>
             </ul>
           </div>

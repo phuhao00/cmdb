@@ -33,7 +33,7 @@ services:
     container_name: cmdb-api
     restart: unless-stopped
     ports:
-      - "8081:8081"
+      - "8082:8081"
     environment:
       MONGO_URI: mongodb://admin:password123@mongodb:27017/cmdb?authSource=admin
       CONSUL_ADDRESS: consul:8500
@@ -63,8 +63,8 @@ services:
       PORT: 3000
       HOSTNAME: "0.0.0.0"
       # API配置 (Next.js使用NEXT_PUBLIC_前缀)
-      NEXT_PUBLIC_API_BASE_URL: http://localhost:8081/api/v1
-      NEXT_PUBLIC_AI_API_BASE_URL: http://localhost:8081/api
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8082/api/v1
+      NEXT_PUBLIC_AI_API_BASE_URL: http://localhost:8082/api
       NEXT_PUBLIC_API_TIMEOUT: 10000
       NEXT_PUBLIC_AI_API_TIMEOUT: 30000
       NEXT_PUBLIC_DEBUG_MODE: true

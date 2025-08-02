@@ -38,18 +38,18 @@ export default function AssetDashboard() {
       
       // Combine data
       setStats({
-        totalAssets: statsRes.total || 0,
-        onlineAssets: statsRes.online || 0,
-        offlineAssets: statsRes.offline || 0,
-        maintenanceAssets: statsRes.maintenance || 0,
-        decommissionedAssets: statsRes.decommissioned || 0,
-        totalValue: statsRes.totalValue || 0,
-        annualCost: statsRes.annualCost || 0,
-        assetsByType: statsRes.byType || {},
-        assetsByLocation: statsRes.byLocation || {},
-        assetsByDepartment: statsRes.byDepartment || {},
-        recentChanges: statsRes.recentChanges || 0,
-        pendingWorkflows: workflowRes.pending || 0,
+        totalAssets: statsRes.data.total || 0,
+        onlineAssets: statsRes.data.online || 0,
+        offlineAssets: statsRes.data.offline || 0,
+        maintenanceAssets: statsRes.data.maintenance || 0,
+        decommissionedAssets: statsRes.data.decommissioned || 0,
+        totalValue: statsRes.data.totalValue || 0,
+        annualCost: statsRes.data.annualCost || 0,
+        assetsByType: statsRes.data.byType || {},
+        assetsByLocation: statsRes.data.byLocation || {},
+        assetsByDepartment: statsRes.data.byDepartment || {},
+        recentChanges: statsRes.data.recentChanges || 0,
+        pendingWorkflows: workflowRes.data.pending || 0,
       });
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);

@@ -15,6 +15,10 @@ export interface AssetData {
   description: string;
   purchasePrice: number;
   annualCost: number;
+  department?: string;
+  owner?: string;
+  ipAddress?: string;
+  tags?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -34,6 +38,27 @@ export interface WorkflowData {
   createdAt: string;
   updatedAt: string;
   completedAt?: string;
+}
+
+export interface AssetStats {
+  total: number;
+  online: number;
+  offline: number;
+  maintenance: number;
+  decommissioned: number;
+  totalValue: number;
+  annualCost: number;
+  byType: Record<string, number>;
+  byLocation: Record<string, number>;
+  byDepartment: Record<string, number>;
+  recentChanges: number;
+}
+
+export interface WorkflowStats {
+  pending: number;
+  approved: number;
+  rejected: number;
+  completed: number;
 }
 
 interface ChatResponse {
@@ -88,7 +113,7 @@ export const bulkCreateAssets = (assetsData: AssetData[]): Promise<AxiosResponse
   return apiClient.post('/assets/bulk', assetsData);
 };
 
-export const fetchAssetStats = (): Promise<AxiosResponse<Record<string, unknown>>> => {
+export const fetchAssetStats = (): Promise<AxiosResponse<AssetStats>> => {
   return apiClient.get('/assets/stats');
 };
 
@@ -112,6 +137,40 @@ export const updateAssetCosts = (id: string, costsData: Record<string, unknown>)
   return apiClient.put(`/assets/${id}/costs`, costsData);
 };
 
+// Alias functions for backward compatibility
+export const getAssets = fetchAssets;
+export const getAsset = fetchAssetById;
+export const getAssetStats = fetchAssetStats;
+export const getAssetTypes = fetchAssetTypes;
+export const getAssetLocations = fetchAssetLocations;
+export const getAssetCosts = fetchAssetCosts;
+export const getCriticalAssets = fetchCriticalAssets;
+
+// Asset action functions
+export const requestDecommission = (assetId: string): Promise<AxiosResponse<AssetData>> => {
+  return apiClient.post(`/assets/${assetId}/decommission`);
+};
+
+export const exportAssets = (format: string = 'json'): Promise<AxiosResponse<AssetData[]>> => {
+  return apiClient.get(`/assets/export?format=${format}`);
+};
+
+export const exportAssetsCSV = (): Promise<AxiosResponse<Blob>> => {
+  return apiClient.get('/assets/export?format=csv', { responseType: 'blob' });
+};
+
+export const importAssets = (formData: FormData): Promise<AxiosResponse<{ 
+  success: number; 
+  failed: number; 
+  errors?: Array<{ row: number; field: string; message: string }> 
+}>> => {
+  return apiClient.post('/assets/import', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+};
+
 // Workflows API
 export const fetchWorkflows = (): Promise<AxiosResponse<WorkflowData[]>> => {
   return apiClient.get('/workflows');
@@ -133,9 +192,60 @@ export const rejectWorkflow = (id: string, comments?: string): Promise<AxiosResp
   return apiClient.put(`/workflows/${id}/reject`, { comments });
 };
 
-export const fetchWorkflowStats = (): Promise<AxiosResponse<Record<string, unknown>>> => {
+export const fetchWorkflowStats = (): Promise<AxiosResponse<WorkflowStats>> => {
   return apiClient.get('/workflows/stats');
 };
+
+// Workflow alias functions
+export const getWorkflows = fetchWorkflows;
+export const getWorkflow = (id: string): Promise<AxiosResponse<WorkflowData>> => {
+  return apiClient.get(`/workflows/${id}`);
+};
+export const getWorkflowStats = fetchWorkflowStats;
+export const getPendingWorkflows = (): Promise<AxiosResponse<WorkflowData[]>> => {
+  return apiClient.get('/workflows/pending');
+};
+
+// User and Auth functions
+export const login = async (username: string, password: string): Promise<AxiosResponse<{ token: string; user: any }>> => {
+  return apiClient.post('/auth/login', { username, password });
+};
+
+export const logout = async (): Promise<AxiosResponse<void>> => {
+  return apiClient.post('/auth/logout');
+};
+
+export const getCurrentUser = async (): Promise<AxiosResponse<any>> => {
+  return apiClient.get('/auth/user');
+};
+
+export const changePassword = async (oldPassword: string, newPassword: string): Promise<AxiosResponse<void>> => {
+  return apiClient.post('/auth/change-password', { oldPassword, newPassword });
+};
+
+export const createUser = async (userData: any): Promise<AxiosResponse<any>> => {
+  return apiClient.post('/users', userData);
+};
+
+export const getUsers = async (): Promise<AxiosResponse<any[]>> => {
+  return apiClient.get('/users');
+};
+
+export const getUser = async (userId: string): Promise<AxiosResponse<any>> => {
+  return apiClient.get(`/users/${userId}`);
+};
+
+export const updateUserStatus = async (userId: string, status: string): Promise<AxiosResponse<any>> => {
+  return apiClient.put(`/users/${userId}/status`, { status });
+};
+
+// Feishu webhook
+export const handleFeishuWebhook = async (data: any): Promise<AxiosResponse<any>> => {
+  return apiClient.post('/webhook/feishu', data);
+};
+
+// AI Chat functions
+// sendChat alias will be added after sendChatMessage is defined
 
 // Reports API
 export const downloadInventoryReport = async (): Promise<void> => {
@@ -260,6 +370,9 @@ export const sendChatMessage = async (message: string, language: string = 'zh'):
   }
 };
 
+// Alias for sendChatMessage
+export const sendChat = sendChatMessage;
+
 export const getAISuggestions = (): Promise<AxiosResponse<string[]>> => {
   return aiApiClient.get('/ai/suggestions');
 };
@@ -318,6 +431,7 @@ export const apiService = {
   updateAssetCosts,
   exportAssets,
   exportAssetsCSV,
+  importAssets,
   getWorkflows,
   getWorkflow,
   createWorkflow,
@@ -367,6 +481,13 @@ export const apiService = {
     if (endDate) params.append('endDate', endDate);
     
     const response = await apiClient.get(`/audit-logs/stats?${params.toString()}`);
+    return response.data;
+  },
+  
+  // Asset History
+  getAssetHistory: async (assetId: string, filter?: string) => {
+    const params = filter ? `?filter=${filter}` : '';
+    const response = await apiClient.get(`/assets/${assetId}/history${params}`);
     return response.data;
   },
   

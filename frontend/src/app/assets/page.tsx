@@ -253,10 +253,7 @@ export default function AssetsPage() {
               <span>批量导入</span>
             </button>
             <button 
-              onClick={() => {
-                setEditingAsset(null);
-                setShowAssetForm(true);
-              }}
+              onClick={() => window.location.href = '/assets/create'}
               className="flex items-center space-x-2 px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
             >
               <Plus className="w-4 h-4" />
