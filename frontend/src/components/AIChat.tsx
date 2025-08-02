@@ -12,7 +12,7 @@ import {
   Loader2,
   Copy
 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+// import { useAuth } from '@/contexts/AuthContext';
 import { sendChatMessage } from '@/services/api';
 
 interface Message {

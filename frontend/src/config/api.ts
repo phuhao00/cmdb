@@ -32,11 +32,11 @@ const getApiConfig = (): ApiConfig => {
     const hostname = window.location.hostname;
     const port = '8081';
     
-    defaultApiBaseUrl = `${protocol}//${hostname}:${port}/api/v1`;
+    defaultApiBaseUrl = `${protocol}//${hostname}:${port}/api`;
     defaultAiApiBaseUrl = `${protocol}//${hostname}:${port}/api`;
   } else {
     // 服务端默认值
-    defaultApiBaseUrl = '/api/v1';
+    defaultApiBaseUrl = '/api';
     defaultAiApiBaseUrl = '/api';
   }
 

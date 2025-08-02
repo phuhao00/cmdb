@@ -6,21 +6,34 @@ const API_BASE_URL = apiConfig.API_BASE_URL;
 const AI_API_BASE_URL = apiConfig.AI_API_BASE_URL;
 
 // 接口定义
-interface AssetData {
-  id?: string;
+export interface AssetData {
+  id: string;
   name: string;
   type: string;
+  status: 'online' | 'offline' | 'maintenance' | 'decommissioned';
   location: string;
-  status: string;
-  // 其他资产属性
+  description: string;
+  purchasePrice: number;
+  annualCost: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
-interface WorkflowData {
-  id?: string;
+export interface WorkflowData {
+  id: string;
   name: string;
   description: string;
-  status: string;
-  // 其他工作流属性
+  status: 'pending' | 'approved' | 'rejected' | 'completed';
+  type: 'asset_create' | 'asset_update' | 'asset_delete' | 'maintenance' | 'decommission';
+  assetId?: string;
+  assetName?: string;
+  requestedBy: string;
+  assignedTo?: string;
+  requestData?: Record<string, unknown>;
+  approvalComments?: string;
+  createdAt: string;
+  updatedAt: string;
+  completedAt?: string;
 }
 
 interface ChatResponse {
@@ -71,6 +84,10 @@ export const deleteAsset = (id: string): Promise<AxiosResponse<void>> => {
   return apiClient.delete(`/assets/${id}`);
 };
 
+export const bulkCreateAssets = (assetsData: AssetData[]): Promise<AxiosResponse<{ message: string; assetsCreated: number }>> => {
+  return apiClient.post('/assets/bulk', assetsData);
+};
+
 export const fetchAssetStats = (): Promise<AxiosResponse<Record<string, unknown>>> => {
   return apiClient.get('/assets/stats');
 };
@@ -106,6 +123,14 @@ export const createWorkflow = (workflowData: WorkflowData): Promise<AxiosRespons
 
 export const updateWorkflow = (id: string, workflowData: Partial<WorkflowData>): Promise<AxiosResponse<WorkflowData>> => {
   return apiClient.put(`/workflows/${id}`, workflowData);
+};
+
+export const approveWorkflow = (id: string, comments?: string): Promise<AxiosResponse<WorkflowData>> => {
+  return apiClient.put(`/workflows/${id}/approve`, { comments });
+};
+
+export const rejectWorkflow = (id: string, comments?: string): Promise<AxiosResponse<WorkflowData>> => {
+  return apiClient.put(`/workflows/${id}/reject`, { comments });
 };
 
 export const fetchWorkflowStats = (): Promise<AxiosResponse<Record<string, unknown>>> => {
