@@ -138,16 +138,49 @@ export const fetchWorkflowStats = (): Promise<AxiosResponse<Record<string, unkno
 };
 
 // Reports API
-export const fetchInventoryReport = (): Promise<AxiosResponse<Record<string, unknown>>> => {
-  return apiClient.get('/reports/inventory');
+export const downloadInventoryReport = async (): Promise<void> => {
+  const response = await apiClient.get('/reports/inventory', {
+    responseType: 'blob',
+  });
+  
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', `inventory-report-${new Date().toISOString().split('T')[0]}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
 };
 
-export const fetchLifecycleReport = (): Promise<AxiosResponse<Record<string, unknown>>> => {
-  return apiClient.get('/reports/lifecycle');
+export const downloadLifecycleReport = async (): Promise<void> => {
+  const response = await apiClient.get('/reports/lifecycle', {
+    responseType: 'blob',
+  });
+  
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', `lifecycle-report-${new Date().toISOString().split('T')[0]}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
 };
 
-export const fetchComplianceReport = (): Promise<AxiosResponse<Record<string, unknown>>> => {
-  return apiClient.get('/reports/compliance');
+export const downloadComplianceReport = async (): Promise<void> => {
+  const response = await apiClient.get('/reports/compliance', {
+    responseType: 'blob',
+  });
+  
+  const url = window.URL.createObjectURL(new Blob([response.data]));
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', `compliance-report-${new Date().toISOString().split('T')[0]}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
 };
 
 // Create AI API client
@@ -248,4 +281,124 @@ export const testAIChat = async (message: string, language: string = 'zh'): Prom
     console.error('❌ AI测试失败:', error);
     throw error;
   }
+};
+
+// Audit Log APIs
+export interface AuditLogSearchParams {
+  page?: number;
+  limit?: number;
+  userId?: string;
+  username?: string;
+  action?: string;
+  resourceType?: string;
+  resourceId?: string;
+  startDate?: string;
+  endDate?: string;
+  success?: boolean;
+  ipAddress?: string;
+  sortBy?: string;
+  sortOrder?: string;
+}
+
+// API service object
+export const apiService = {
+  // Existing APIs
+  getAssets,
+  getAsset,
+  createAsset,
+  updateAsset,
+  deleteAsset,
+  getAssetStats,
+  requestDecommission,
+  bulkCreateAssets,
+  getAssetTypes,
+  getAssetLocations,
+  getAssetCosts,
+  getCriticalAssets,
+  updateAssetCosts,
+  exportAssets,
+  exportAssetsCSV,
+  getWorkflows,
+  getWorkflow,
+  createWorkflow,
+  approveWorkflow,
+  rejectWorkflow,
+  getWorkflowStats,
+  getPendingWorkflows,
+  handleFeishuWebhook,
+  login,
+  logout,
+  getCurrentUser,
+  changePassword,
+  createUser,
+  getUsers,
+  getUser,
+  updateUserStatus,
+  sendChat,
+  getAISuggestions,
+  testAIChat,
+  
+  // Audit Log APIs
+  searchAuditLogs: async (params: AuditLogSearchParams) => {
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        queryParams.append(key, value.toString());
+      }
+    });
+    
+    const response = await apiClient.get(`/audit-logs?${queryParams.toString()}`);
+    return response.data;
+  },
+  
+  getUserActivityLogs: async (userId: string, limit: number = 100) => {
+    const response = await apiClient.get(`/audit-logs/user/${userId}?limit=${limit}`);
+    return response.data;
+  },
+  
+  getResourceHistory: async (resourceType: string, resourceId: string, limit: number = 100) => {
+    const response = await apiClient.get(`/audit-logs/resource/${resourceType}/${resourceId}?limit=${limit}`);
+    return response.data;
+  },
+  
+  getAuditLogStats: async (startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    
+    const response = await apiClient.get(`/audit-logs/stats?${params.toString()}`);
+    return response.data;
+  },
+  
+  // Asset Tag APIs
+  addAssetTags: async (assetId: string, tags: string[]) => {
+    const response = await apiClient.post(`/assets/${assetId}/tags`, { tags });
+    return response.data;
+  },
+  
+  removeAssetTag: async (assetId: string, tag: string) => {
+    const response = await apiClient.delete(`/assets/${assetId}/tags/${tag}`);
+    return response.data;
+  },
+  
+  getAllTags: async () => {
+    const response = await apiClient.get('/assets/tags');
+    return response.data;
+  },
+  
+  // Advanced Asset Search
+  searchAssets: async (searchCriteria: any) => {
+    const response = await apiClient.post('/assets/search', searchCriteria);
+    return response.data;
+  },
+  
+  getDepartments: async () => {
+    const response = await apiClient.get('/assets/departments');
+    return response.data;
+  },
+  
+  getOwners: async () => {
+    const response = await apiClient.get('/assets/owners');
+    return response.data;
+  },
 };

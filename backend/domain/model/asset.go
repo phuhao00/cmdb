@@ -21,9 +21,9 @@ const (
 	WorkstationType AssetType = "workstation"
 
 	// Asset Statuses
-	OnlineStatus        AssetStatus = "online"
-	OfflineStatus       AssetStatus = "offline"
-	MaintenanceStatus   AssetStatus = "maintenance"
+	OnlineStatus         AssetStatus = "online"
+	OfflineStatus        AssetStatus = "offline"
+	MaintenanceStatus    AssetStatus = "maintenance"
 	DecommissionedStatus AssetStatus = "decommissioned"
 )
 
@@ -37,11 +37,17 @@ type Asset struct {
 	Location    string             `json:"location" bson:"location"`
 	Description string             `json:"description" bson:"description"`
 	// Cost tracking fields
-	PurchasePrice float64            `json:"purchasePrice" bson:"purchasePrice"`
-	AnnualCost    float64            `json:"annualCost" bson:"annualCost"`
-	Currency      string             `json:"currency" bson:"currency"`
-	CreatedAt   time.Time          `json:"createdAt" bson:"createdAt"`
-	UpdatedAt   time.Time          `json:"updatedAt" bson:"updatedAt"`
+	PurchasePrice float64 `json:"purchasePrice" bson:"purchasePrice"`
+	AnnualCost    float64 `json:"annualCost" bson:"annualCost"`
+	Currency      string  `json:"currency" bson:"currency"`
+	// New fields for enhanced functionality
+	Tags        []string  `json:"tags" bson:"tags"`
+	Department  string    `json:"department" bson:"department"`
+	Owner       string    `json:"owner" bson:"owner"`
+	LastScanned time.Time `json:"lastScanned" bson:"lastScanned"`
+	IPAddress   string    `json:"ipAddress" bson:"ipAddress"`
+	CreatedAt   time.Time `json:"createdAt" bson:"createdAt"`
+	UpdatedAt   time.Time `json:"updatedAt" bson:"updatedAt"`
 }
 
 // NewAsset creates a new asset with default values
@@ -99,4 +105,49 @@ func (a *Asset) IsOffline() bool {
 // IsInMaintenance checks if the asset is in maintenance
 func (a *Asset) IsInMaintenance() bool {
 	return a.Status == MaintenanceStatus
+}
+
+// AddTag adds a tag to the asset if it doesn't already exist
+func (a *Asset) AddTag(tag string) {
+	for _, t := range a.Tags {
+		if t == tag {
+			return
+		}
+	}
+	a.Tags = append(a.Tags, tag)
+	a.UpdatedAt = time.Now()
+}
+
+// RemoveTag removes a tag from the asset
+func (a *Asset) RemoveTag(tag string) {
+	var newTags []string
+	for _, t := range a.Tags {
+		if t != tag {
+			newTags = append(newTags, t)
+		}
+	}
+	a.Tags = newTags
+	a.UpdatedAt = time.Now()
+}
+
+// HasTag checks if the asset has a specific tag
+func (a *Asset) HasTag(tag string) bool {
+	for _, t := range a.Tags {
+		if t == tag {
+			return true
+		}
+	}
+	return false
+}
+
+// SetOwner sets the owner of the asset
+func (a *Asset) SetOwner(owner string) {
+	a.Owner = owner
+	a.UpdatedAt = time.Now()
+}
+
+// UpdateLastScanned updates the last scanned timestamp
+func (a *Asset) UpdateLastScanned() {
+	a.LastScanned = time.Now()
+	a.UpdatedAt = time.Now()
 }

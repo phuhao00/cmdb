@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Upload, FileText, AlertCircle, CheckCircle } from 'lucide-react';
+import { X, Upload, AlertCircle, CheckCircle } from 'lucide-react';
 import { AssetData } from '@/services/api';
 
 interface BulkImportModalProps {
@@ -57,9 +57,9 @@ export default function BulkImportModal({ isOpen, onClose, onImport }: BulkImpor
         throw new Error(`第${i + 1}行数据格式错误`);
       }
 
-      const asset: any = {};
+      const asset: Record<string, string | number> = {};
       headers.forEach((header, index) => {
-        let value: any = values[index];
+        let value: string | number = values[index];
         
         // 转换数值类型
         if (header === 'purchasePrice' || header === 'annualCost') {

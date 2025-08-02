@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Package, DollarSign, MapPin, FileText } from 'lucide-react';
+import { X } from 'lucide-react';
 import { AssetData } from '@/services/api';
 
 interface AssetFormProps {
@@ -35,9 +35,14 @@ export default function AssetForm({ isOpen, onClose, onSubmit, asset, mode = 'cr
     location: '',
     description: '',
     purchasePrice: 0,
-    annualCost: 0
+    annualCost: 0,
+    department: '',
+    owner: '',
+    ipAddress: '',
+    tags: []
   });
   const [loading, setLoading] = useState(false);
+  const [tagInput, setTagInput] = useState('');
 
   useEffect(() => {
     if (asset && mode === 'edit') {
@@ -48,7 +53,11 @@ export default function AssetForm({ isOpen, onClose, onSubmit, asset, mode = 'cr
         location: asset.location,
         description: asset.description,
         purchasePrice: asset.purchasePrice,
-        annualCost: asset.annualCost
+        annualCost: asset.annualCost,
+        department: asset.department || '',
+        owner: asset.owner || '',
+        ipAddress: asset.ipAddress || '',
+        tags: asset.tags || []
       });
     } else {
       setFormData({
@@ -144,7 +153,7 @@ export default function AssetForm({ isOpen, onClose, onSubmit, asset, mode = 'cr
                   </label>
                   <select
                     value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value as 'online' | 'offline' | 'maintenance' | 'decommissioned' })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                   >
                     {assetStatuses.map(status => (
@@ -185,6 +194,102 @@ export default function AssetForm({ isOpen, onClose, onSubmit, asset, mode = 'cr
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                     placeholder="详细描述资产的配置、用途等信息..."
                   />
+                </div>
+              </div>
+            </div>
+
+            {/* 管理信息 */}
+            <div>
+              <h3 className="text-sm font-medium text-gray-900 mb-4">管理信息</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    部门
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.department}
+                    onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="例如：IT部门"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    负责人
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.owner}
+                    onChange={(e) => setFormData({ ...formData, owner: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="例如：张三"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    IP地址
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.ipAddress}
+                    onChange={(e) => setFormData({ ...formData, ipAddress: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="例如：192.168.1.100"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    标签
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (tagInput.trim()) {
+                            setFormData({
+                              ...formData,
+                              tags: [...(formData.tags || []), tagInput.trim()]
+                            });
+                            setTagInput('');
+                          }
+                        }
+                      }}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="输入标签后按回车"
+                    />
+                  </div>
+                  {formData.tags && formData.tags.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {formData.tags.map((tag, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700"
+                        >
+                          {tag}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormData({
+                                ...formData,
+                                tags: formData.tags?.filter((_, i) => i !== index)
+                              });
+                            }}
+                            className="ml-1 text-blue-500 hover:text-blue-700"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

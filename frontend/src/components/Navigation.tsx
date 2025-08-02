@@ -72,6 +72,12 @@ const navigationItems: NavigationItem[] = [
     requiredRole: ['admin', 'manager'],
   },
   {
+    name: '审计日志',
+    href: '/audit-logs',
+    icon: FileText,
+    requiredRole: ['admin', 'manager'],
+  },
+  {
     name: '系统设置',
     href: '/settings',
     icon: Settings,

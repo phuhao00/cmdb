@@ -19,7 +19,10 @@ import {
   fetchAssets,
   fetchWorkflows,
   AssetData,
-  WorkflowData
+  WorkflowData,
+  downloadInventoryReport,
+  downloadLifecycleReport,
+  downloadComplianceReport
 } from '@/services/api';
 
 interface ReportData {
@@ -38,7 +41,7 @@ interface ReportCardProps {
 
 function ReportCard({ title, description, icon: Icon, color, data, onGenerate, loading }: ReportCardProps) {
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6">
+    <div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-lg transition-shadow">
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center space-x-3">
           <div className={`p-3 rounded-lg ${color}`}>
@@ -52,26 +55,60 @@ function ReportCard({ title, description, icon: Icon, color, data, onGenerate, l
         <button
           onClick={onGenerate}
           disabled={loading}
-          className="flex items-center space-x-2 px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+          className="flex items-center space-x-2 px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
         >
           {loading ? (
             <RefreshCw className="w-4 h-4 animate-spin" />
           ) : (
             <Download className="w-4 h-4" />
           )}
-          <span>{loading ? '生成中...' : '生成报告'}</span>
+          <span>{loading ? '生成中...' : '下载CSV报告'}</span>
         </button>
       </div>
 
       {data && (
         <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+          <h4 className="text-sm font-medium text-gray-700 mb-3">报告预览</h4>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-            {Object.entries(data).map(([key, value]) => (
-              <div key={key}>
-                <p className="text-gray-500 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</p>
-                <p className="font-semibold text-gray-900">{typeof value === 'number' ? value.toLocaleString() : String(value)}</p>
-              </div>
-            ))}
+            {Object.entries(data).map(([key, value]) => {
+              const labels: Record<string, string> = {
+                totalAssets: '总资产数',
+                onlineAssets: '在线资产',
+                offlineAssets: '离线资产',
+                maintenanceAssets: '维护中资产',
+                totalValue: '总价值',
+                avgValue: '平均价值',
+                assetTypes: '资产类型数',
+                locations: '位置数',
+                newAssets: '新增资产',
+                updatedAssets: '更新资产',
+                avgAge: '平均年龄(天)',
+                oldestAsset: '最旧资产(天)',
+                newestAsset: '最新资产(天)',
+                maintenanceFreq: '维护频率(%)',
+                compliantAssets: '合规资产',
+                nonCompliantAssets: '非合规资产',
+                pendingWorkflows: '待处理工作流',
+                approvedWorkflows: '已批准工作流',
+                complianceRate: '合规率(%)',
+                auditableAssets: '可审计资产',
+                documentsComplete: '文档完整率(%)',
+                riskLevel: '风险等级'
+              };
+              
+              return (
+                <div key={key} className="bg-white p-3 rounded-md border border-gray-200">
+                  <p className="text-xs text-gray-500 mb-1">{labels[key] || key}</p>
+                  <p className="font-semibold text-gray-900">
+                    {key === 'totalValue' || key === 'avgValue' 
+                      ? `¥${(Number(value) / 10000).toFixed(2)}万`
+                      : typeof value === 'number' 
+                        ? value.toLocaleString() 
+                        : String(value)}
+                  </p>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -92,7 +129,7 @@ interface StatCardProps {
 
 function StatCard({ title, value, change, icon: Icon, color }: StatCardProps) {
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6">
+    <div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-gray-600 mb-1">{title}</p>
@@ -104,11 +141,12 @@ function StatCard({ title, value, change, icon: Icon, color }: StatCardProps) {
               <TrendingUp className={`w-4 h-4 mr-1 ${
                 change.isPositive ? '' : 'rotate-180'
               }`} />
-              {change.value}%
+              <span className="font-medium">{change.value}%</span>
+              <span className="ml-1 text-gray-500 text-xs">较上月</span>
             </p>
           )}
         </div>
-        <div className={`p-3 rounded-full ${color}`}>
+        <div className={`p-3 rounded-full ${color} bg-opacity-90`}>
           <Icon className="w-6 h-6 text-white" />
         </div>
       </div>
@@ -163,18 +201,19 @@ export default function ReportsPage() {
         offlineAssets: assets.filter(a => a.status === 'offline').length,
         maintenanceAssets: assets.filter(a => a.status === 'maintenance').length,
         totalValue: assets.reduce((sum, a) => sum + (a.purchasePrice || 0), 0),
-        avgValue: Math.round(assets.reduce((sum, a) => sum + (a.purchasePrice || 0), 0) / assets.length),
+        avgValue: Math.round(assets.reduce((sum, a) => sum + (a.purchasePrice || 0), 0) / assets.length || 0),
         assetTypes: [...new Set(assets.map(a => a.type))].length,
         locations: [...new Set(assets.map(a => a.location))].length
       };
       
       setReportData(prev => ({ ...prev, inventory: inventoryData }));
       
-      // 模拟API调用
-      // const response = await fetchInventoryReport();
+      // 下载CSV报告
+      await downloadInventoryReport();
       
     } catch (error) {
       console.error('Failed to generate inventory report:', error);
+      alert('生成库存报告失败，请稍后重试');
     } finally {
       setReportLoading(prev => ({ ...prev, inventory: false }));
     }
@@ -188,26 +227,32 @@ export default function ReportsPage() {
       const now = new Date();
       const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
       
-      const lifecycleData = {
-        newAssets: assets.filter(a => new Date(a.createdAt) > oneYearAgo).length,
-        updatedAssets: assets.filter(a => new Date(a.updatedAt) > oneYearAgo).length,
-        avgAge: Math.round(assets.reduce((sum, a) => {
-          const ageInDays = (now.getTime() - new Date(a.createdAt).getTime()) / (1000 * 60 * 60 * 24);
-          return sum + ageInDays;
-        }, 0) / assets.length),
-        oldestAsset: Math.max(...assets.map(a => {
-          return (now.getTime() - new Date(a.createdAt).getTime()) / (1000 * 60 * 60 * 24);
-        })),
-        newestAsset: Math.min(...assets.map(a => {
-          return (now.getTime() - new Date(a.createdAt).getTime()) / (1000 * 60 * 60 * 24);
-        })),
-        maintenanceFreq: Math.round((assets.filter(a => a.status === 'maintenance').length / assets.length) * 100)
-      };
+      if (assets.length > 0) {
+        const lifecycleData = {
+          newAssets: assets.filter(a => new Date(a.createdAt) > oneYearAgo).length,
+          updatedAssets: assets.filter(a => new Date(a.updatedAt) > oneYearAgo).length,
+          avgAge: Math.round(assets.reduce((sum, a) => {
+            const ageInDays = (now.getTime() - new Date(a.createdAt).getTime()) / (1000 * 60 * 60 * 24);
+            return sum + ageInDays;
+          }, 0) / assets.length),
+          oldestAsset: Math.round(Math.max(...assets.map(a => {
+            return (now.getTime() - new Date(a.createdAt).getTime()) / (1000 * 60 * 60 * 24);
+          }))),
+          newestAsset: Math.round(Math.min(...assets.map(a => {
+            return (now.getTime() - new Date(a.createdAt).getTime()) / (1000 * 60 * 60 * 24);
+          }))),
+          maintenanceFreq: Math.round((assets.filter(a => a.status === 'maintenance').length / assets.length) * 100)
+        };
+        
+        setReportData(prev => ({ ...prev, lifecycle: lifecycleData }));
+      }
       
-      setReportData(prev => ({ ...prev, lifecycle: lifecycleData }));
+      // 下载CSV报告
+      await downloadLifecycleReport();
       
     } catch (error) {
       console.error('Failed to generate lifecycle report:', error);
+      alert('生成生命周期报告失败，请稍后重试');
     } finally {
       setReportLoading(prev => ({ ...prev, lifecycle: false }));
     }
@@ -218,28 +263,59 @@ export default function ReportsPage() {
       setReportLoading(prev => ({ ...prev, compliance: true }));
       
       // 生成合规统计数据
-      const complianceData = {
-        compliantAssets: assets.filter(a => a.status === 'online' || a.status === 'maintenance').length,
-        nonCompliantAssets: assets.filter(a => a.status === 'offline').length,
-        pendingWorkflows: workflows.filter(w => w.status === 'pending').length,
-        approvedWorkflows: workflows.filter(w => w.status === 'approved').length,
-        complianceRate: Math.round((assets.filter(a => a.status !== 'offline').length / assets.length) * 100),
-        auditableAssets: assets.filter(a => a.description && a.location).length,
-        documentsComplete: Math.round((assets.filter(a => a.description).length / assets.length) * 100),
-        riskLevel: assets.filter(a => a.status === 'offline').length > 5 ? 'High' : 'Low'
-      };
+      if (assets.length > 0) {
+        const complianceData = {
+          compliantAssets: assets.filter(a => a.status === 'online' || a.status === 'maintenance').length,
+          nonCompliantAssets: assets.filter(a => a.status === 'offline').length,
+          pendingWorkflows: workflows.filter(w => w.status === 'pending').length,
+          approvedWorkflows: workflows.filter(w => w.status === 'approved').length,
+          complianceRate: Math.round((assets.filter(a => a.status !== 'offline').length / assets.length) * 100),
+          auditableAssets: assets.filter(a => a.description && a.location).length,
+          documentsComplete: Math.round((assets.filter(a => a.description).length / assets.length) * 100),
+          riskLevel: assets.filter(a => a.status === 'offline').length > 5 ? 'High' : 'Low'
+        };
+        
+        setReportData(prev => ({ ...prev, compliance: complianceData }));
+      }
       
-      setReportData(prev => ({ ...prev, compliance: complianceData }));
+      // 下载CSV报告
+      await downloadComplianceReport();
       
     } catch (error) {
       console.error('Failed to generate compliance report:', error);
+      alert('生成合规报告失败，请稍后重试');
     } finally {
       setReportLoading(prev => ({ ...prev, compliance: false }));
     }
   };
 
   const getOverallStats = () => {
-    if (assets.length === 0) return [];
+    if (assets.length === 0) return [
+      {
+        title: '资产总数',
+        value: 0,
+        icon: Package,
+        color: 'bg-blue-500'
+      },
+      {
+        title: '在线率',
+        value: '0%',
+        icon: CheckCircle,
+        color: 'bg-green-500'
+      },
+      {
+        title: '待审批工作流',
+        value: 0,
+        icon: Clock,
+        color: 'bg-yellow-500'
+      },
+      {
+        title: '总价值',
+        value: '¥0.00',
+        icon: DollarSign,
+        color: 'bg-purple-500'
+      }
+    ];
     
     return [
       {
@@ -358,35 +434,36 @@ export default function ReportsPage() {
         </div>
 
         {/* 报告摘要 */}
-        <div className="mt-8 bg-white rounded-lg border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">报告摘要</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="space-y-3">
-              <h4 className="font-medium text-gray-900">资产健康状况</h4>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">在线资产</span>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-20 bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-green-600 h-2 rounded-full" 
-                        style={{ width: `${(assets.filter(a => a.status === 'online').length / assets.length) * 100}%` }}
-                      />
+        {assets.length > 0 ? (
+          <div className="mt-8 bg-white rounded-lg border border-gray-200 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">报告摘要</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-3">
+                <h4 className="font-medium text-gray-900">资产健康状况</h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">在线资产</span>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-20 bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-green-600 h-2 rounded-full" 
+                          style={{ width: `${Math.round((assets.filter(a => a.status === 'online').length / assets.length) * 100)}%` }}
+                        />
+                      </div>
+                      <span className="text-sm font-medium">{assets.filter(a => a.status === 'online').length}</span>
                     </div>
-                    <span className="text-sm font-medium">{assets.filter(a => a.status === 'online').length}</span>
                   </div>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">离线资产</span>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-20 bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-red-600 h-2 rounded-full" 
-                        style={{ width: `${(assets.filter(a => a.status === 'offline').length / assets.length) * 100}%` }}
-                      />
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">离线资产</span>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-20 bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-red-600 h-2 rounded-full" 
+                          style={{ width: `${Math.round((assets.filter(a => a.status === 'offline').length / assets.length) * 100)}%` }}
+                        />
+                      </div>
+                      <span className="text-sm font-medium">{assets.filter(a => a.status === 'offline').length}</span>
                     </div>
-                    <span className="text-sm font-medium">{assets.filter(a => a.status === 'offline').length}</span>
-                  </div>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">维护中</span>
@@ -452,6 +529,26 @@ export default function ReportsPage() {
             </div>
           </div>
         </div>
+        ) : (
+          <div className="mt-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 p-12">
+            <div className="text-center">
+              <Database className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-4 text-lg font-medium text-gray-900">暂无数据</h3>
+              <p className="mt-2 text-sm text-gray-500">
+                系统中还没有任何资产数据。请先添加资产后再生成报告。
+              </p>
+              <div className="mt-6">
+                <a
+                  href="/assets"
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                >
+                  <Package className="w-4 h-4 mr-2" />
+                  前往资产管理
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </Layout>
   );

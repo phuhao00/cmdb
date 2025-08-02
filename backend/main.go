@@ -34,18 +34,21 @@ func main() {
 	assetRepo := persistence.NewMongoDBAssetRepository(database)
 	workflowRepo := persistence.NewMongoDBWorkflowRepository(database)
 	userRepo := persistence.NewMongoDBUserRepository(database)
+	auditLogRepo := persistence.NewMongoAuditLogRepository(database)
 
 	// Initialize services
 	assetService := service.NewAssetService(assetRepo, workflowRepo)
 	workflowService := service.NewWorkflowService(workflowRepo, assetRepo)
 	authService := service.NewAuthService(userRepo)
 	aiService := service.NewAIService(assetService, workflowService, userRepo)
+	auditLogService := service.NewAuditLogService(auditLogRepo)
 
 	// Initialize applications
 	assetApp := application.NewAssetApplication(assetService, workflowService)
 	workflowApp := application.NewWorkflowApplication(workflowService)
 	authApp := application.NewAuthApplication(authService)
 	aiApp := application.NewAIApplication(aiService)
+	auditLogApp := application.NewAuditLogApplication(auditLogService)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(authApp)

@@ -11,15 +11,23 @@ import (
 
 // AssetDTO represents the data transfer object for assets
 type AssetDTO struct {
-	ID          string    `json:"id"`
-	AssetID     string    `json:"assetId"`
-	Name        string    `json:"name"`
-	Type        string    `json:"type"`
-	Status      string    `json:"status"`
-	Location    string    `json:"location"`
-	Description string    `json:"description"`
-	CreatedAt   time.Time `json:"createdAt"`
-	UpdatedAt   time.Time `json:"updatedAt"`
+	ID            string    `json:"id"`
+	AssetID       string    `json:"assetId"`
+	Name          string    `json:"name"`
+	Type          string    `json:"type"`
+	Status        string    `json:"status"`
+	Location      string    `json:"location"`
+	Description   string    `json:"description"`
+	PurchasePrice float64   `json:"purchasePrice"`
+	AnnualCost    float64   `json:"annualCost"`
+	Currency      string    `json:"currency"`
+	Tags          []string  `json:"tags"`
+	Department    string    `json:"department"`
+	Owner         string    `json:"owner"`
+	IPAddress     string    `json:"ipAddress"`
+	LastScanned   time.Time `json:"lastScanned"`
+	CreatedAt     time.Time `json:"createdAt"`
+	UpdatedAt     time.Time `json:"updatedAt"`
 }
 
 // AssetCreateDTO represents the data for creating an asset
@@ -343,14 +351,104 @@ func (a *AssetApplication) UpdateAssetCosts(ctx context.Context, id string, cost
 // Helper function to map an asset to a DTO
 func mapAssetToDTO(asset *model.Asset) *AssetDTO {
 	return &AssetDTO{
-		ID:          asset.ID.Hex(),
-		AssetID:     asset.AssetID,
-		Name:        asset.Name,
-		Type:        string(asset.Type),
-		Status:      string(asset.Status),
-		Location:    asset.Location,
-		Description: asset.Description,
-		CreatedAt:   asset.CreatedAt,
-		UpdatedAt:   asset.UpdatedAt,
+		ID:            asset.ID.Hex(),
+		AssetID:       asset.AssetID,
+		Name:          asset.Name,
+		Type:          string(asset.Type),
+		Status:        string(asset.Status),
+		Location:      asset.Location,
+		Description:   asset.Description,
+		PurchasePrice: asset.PurchasePrice,
+		AnnualCost:    asset.AnnualCost,
+		Currency:      asset.Currency,
+		Department:    asset.Department,
+		Owner:         asset.Owner,
+		IPAddress:     asset.IPAddress,
+		Tags:          asset.Tags,
+		LastScanned:   asset.LastScanned,
+		CreatedAt:     asset.CreatedAt,
+		UpdatedAt:     asset.UpdatedAt,
 	}
+}
+
+// AddAssetTags adds tags to an asset
+func (a *AssetApplication) AddAssetTags(ctx context.Context, id string, tags []string) error {
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return err
+	}
+
+	asset, err := a.assetService.GetAssetByID(ctx, objectID)
+	if err != nil {
+		return err
+	}
+
+	for _, tag := range tags {
+		asset.AddTag(tag)
+	}
+
+	return a.assetService.UpdateAsset(ctx, asset)
+}
+
+// RemoveAssetTag removes a tag from an asset
+func (a *AssetApplication) RemoveAssetTag(ctx context.Context, id string, tag string) error {
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return err
+	}
+
+	asset, err := a.assetService.GetAssetByID(ctx, objectID)
+	if err != nil {
+		return err
+	}
+
+	asset.RemoveTag(tag)
+
+	return a.assetService.UpdateAsset(ctx, asset)
+}
+
+// GetAllTags retrieves all unique tags across all assets
+func (a *AssetApplication) GetAllTags(ctx context.Context) ([]string, error) {
+	return a.assetService.GetAllTags(ctx)
+}
+
+// SearchAssets performs advanced search on assets
+func (a *AssetApplication) SearchAssets(ctx context.Context, searchDTO AssetSearchDTO) ([]*model.Asset, int64, error) {
+	// Convert DTO to service search criteria
+	criteria := service.AssetSearchCriteria{
+		Query:      searchDTO.Query,
+		Type:       searchDTO.Type,
+		Status:     searchDTO.Status,
+		Location:   searchDTO.Location,
+		Department: searchDTO.Department,
+		Owner:      searchDTO.Owner,
+		Tags:       searchDTO.Tags,
+		IPAddress:  searchDTO.IPAddress,
+		SortBy:     searchDTO.SortBy,
+		SortOrder:  searchDTO.SortOrder,
+		Page:       searchDTO.Page,
+		Limit:      searchDTO.Limit,
+	}
+
+	assets, err := a.assetService.SearchAssets(ctx, criteria)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	total, err := a.assetService.CountAssets(ctx, criteria)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return assets, total, nil
+}
+
+// GetDepartments retrieves all unique departments
+func (a *AssetApplication) GetDepartments(ctx context.Context) ([]string, error) {
+	return a.assetService.GetDepartments(ctx)
+}
+
+// GetOwners retrieves all unique owners
+func (a *AssetApplication) GetOwners(ctx context.Context) ([]string, error) {
+	return a.assetService.GetOwners(ctx)
 }
