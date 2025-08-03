@@ -17,9 +17,9 @@ const apiClient = axios.create({
 // 请求拦截器 - 添加认证token
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
@@ -56,9 +56,9 @@ const aiApiClient = axios.create({
 // AI API请求拦截器
 aiApiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
@@ -411,27 +411,27 @@ class ApiService {
     });
     return response.data;
   }
-
+  
   async getAssetTypes(): Promise<string[]> {
     const response: AxiosResponse<string[]> = await apiClient.get('/assets/types');
     return response.data;
   }
-
+  
   async getAssetLocations(): Promise<string[]> {
     const response: AxiosResponse<string[]> = await apiClient.get('/assets/locations');
     return response.data;
   }
-
+  
   async getDepartments(): Promise<string[]> {
     const response: AxiosResponse<string[]> = await apiClient.get('/assets/departments');
     return response.data;
   }
-
+  
   async getOwners(): Promise<string[]> {
     const response: AxiosResponse<string[]> = await apiClient.get('/assets/owners');
     return response.data;
   }
-
+  
   async getAllTags(): Promise<string[]> {
     const response: AxiosResponse<string[]> = await apiClient.get('/assets/tags');
     return response.data;
