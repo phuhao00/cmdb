@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Upload, Download, FileSpreadsheet, AlertCircle, CheckCircle, XCircle, FileText } from 'lucide-react';
-import { apiService } from '@/services/api';
+import { importAssets, exportAssets, exportAssetsCSV } from '@/services/api';
 
 interface ImportResult {
   success: number;
@@ -43,7 +43,7 @@ export default function AssetImportExport() {
       const formData = new FormData();
       formData.append('file', selectedFile);
       
-      const response = await apiService.importAssets(formData);
+      const response = await importAssets(selectedFile);
       setImportResult({
         success: response.data.success || 0,
         failed: response.data.failed || 0,
@@ -68,10 +68,10 @@ export default function AssetImportExport() {
       let blob;
       
       if (exportFormat === 'csv') {
-        response = await apiService.exportAssetsCSV();
+        response = await exportAssetsCSV();
         blob = response.data;
       } else {
-        response = await apiService.exportAssets(exportFormat);
+        response = await exportAssets(exportFormat);
         blob = new Blob([JSON.stringify(response.data)], {
           type: 'application/json',
         });

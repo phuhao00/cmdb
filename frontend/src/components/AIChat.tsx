@@ -13,7 +13,7 @@ import {
   Copy
 } from 'lucide-react';
 // import { useAuth } from '@/contexts/AuthContext';
-import { sendChatMessage } from '@/services/api';
+import { sendChat } from '@/services/api';
 
 interface Message {
   id: number;
@@ -120,7 +120,7 @@ const AIChat: React.FC<AIChatProps> = ({ language = 'zh' }) => {
 
     try {
       // 调用真实的AI API
-      const response = await sendChatMessage(messageText, language);
+      const response = await sendChat(messageText, language);
       
       setIsTyping(false);
       const aiMessage: Message = {

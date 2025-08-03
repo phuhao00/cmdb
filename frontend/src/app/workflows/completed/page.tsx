@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
-import { apiService } from '@/services/api';
-import { WorkflowData } from '@/services/api';
+import { getWorkflows, WorkflowData } from '@/services/api';
 import { CheckCircle, XCircle, Clock, Calendar } from 'lucide-react';
 
 export default function CompletedWorkflowsPage() {
@@ -22,7 +21,7 @@ export default function CompletedWorkflowsPage() {
   const fetchCompletedWorkflows = async () => {
     try {
       setLoading(true);
-      const response = await apiService.getWorkflows();
+      const response = await getWorkflows();
       // 过滤出已完成的工作流（包括批准和拒绝的）
       const completedWorkflows = response.data.filter(
         wf => wf.status === 'approved' || wf.status === 'rejected' || wf.status === 'completed'

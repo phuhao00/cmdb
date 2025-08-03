@@ -13,7 +13,7 @@ import {
   AlertTriangle,
   CheckCircle
 } from 'lucide-react';
-import { apiService } from '@/services/api';
+import { getSystemSettings, updateSystemSettings } from '@/services/api';
 
 interface SystemSettings {
   general: {
@@ -114,12 +114,11 @@ export default function SettingsPage() {
   const loadSettings = async () => {
     setLoading(true);
     try {
-      // 这里应该调用实际的API来加载设置
-      // const response = await apiService.getSystemSettings();
-      // setSettings(response.data);
-      console.log('Loading system settings...');
-    } catch (error) {
-      console.error('Failed to load settings:', error);
+      setError(null);
+      const data = await getSystemSettings();
+      setSettings(data);
+    } catch (err) {
+      console.error('Failed to load settings:', err);
       setMessage({ type: 'error', text: '加载设置失败' });
     } finally {
       setLoading(false);
@@ -129,13 +128,11 @@ export default function SettingsPage() {
   const saveSettings = async () => {
     setSaving(true);
     try {
-      // 这里应该调用实际的API来保存设置
-      // await apiService.updateSystemSettings(settings);
-      console.log('Saving settings:', settings);
+              await updateSystemSettings(settings);
       setMessage({ type: 'success', text: '设置保存成功' });
       setTimeout(() => setMessage(null), 3000);
-    } catch (error) {
-      console.error('Failed to save settings:', error);
+    } catch (err) {
+      console.error('Failed to save settings:', err);
       setMessage({ type: 'error', text: '保存设置失败' });
     } finally {
       setSaving(false);

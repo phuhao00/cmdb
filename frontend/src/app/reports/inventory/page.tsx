@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
-import { apiService, AssetData } from '@/services/api';
+import { getAssets, getAssetStats, exportAssetsCSV, AssetData } from '@/services/api';
 import { Download, Package, Server, Monitor, HardDrive, Network } from 'lucide-react';
 
 export default function InventoryReportPage() {
@@ -24,8 +24,8 @@ export default function InventoryReportPage() {
     try {
       setLoading(true);
       const [assetsRes, statsRes] = await Promise.all([
-        apiService.getAssets(),
-        apiService.getAssetStats()
+        getAssets(),
+        getAssetStats()
       ]);
 
       setAssets(assetsRes.data);
@@ -67,7 +67,7 @@ export default function InventoryReportPage() {
   const handleDownload = async (format: 'excel' | 'pdf') => {
     try {
       if (format === 'excel') {
-        const response = await apiService.exportAssetsCSV();
+        const response = await exportAssetsCSV();
         const blob = response.data;
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');

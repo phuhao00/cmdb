@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { BarChart3, PieChart, TrendingUp, TrendingDown, Activity, AlertCircle, CheckCircle, XCircle, Clock } from 'lucide-react';
-import { apiService } from '@/services/api';
+import { getAssetStats, getWorkflowStats } from '@/services/api';
 
 interface DashboardStats {
   totalAssets: number;
@@ -32,8 +32,8 @@ export default function AssetDashboard() {
     try {
       setLoading(true);
       const [statsRes, workflowRes] = await Promise.all([
-        apiService.getAssetStats(),
-        apiService.getWorkflowStats(),
+        getAssetStats(),
+        getWorkflowStats(),
       ]);
       
       // Combine data

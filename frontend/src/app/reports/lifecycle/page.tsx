@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
-import { apiService, AssetData } from '@/services/api';
+import { getAssets, AssetData } from '@/services/api';
 import { Download, TrendingUp, AlertTriangle, Calendar, BarChart3 } from 'lucide-react';
 
 export default function LifecycleReportPage() {
@@ -23,7 +23,7 @@ export default function LifecycleReportPage() {
   const fetchLifecycleData = async () => {
     try {
       setLoading(true);
-      const response = await apiService.getAssets();
+      const response = await getAssets();
       const assetsData = response.data;
       setAssets(assetsData);
 

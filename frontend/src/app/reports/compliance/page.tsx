@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Layout } from '@/components/Layout';
-import { apiService, AssetData } from '@/services/api';
+import { getAssets, AssetData } from '@/services/api';
 import { Download, Shield, CheckCircle, XCircle, AlertTriangle, FileText } from 'lucide-react';
 
 export default function ComplianceReportPage() {
@@ -34,8 +33,7 @@ export default function ComplianceReportPage() {
   const fetchComplianceData = async () => {
     try {
       setLoading(true);
-      const response = await apiService.getAssets();
-      const assetsData = response.data;
+      const assetsData = await getAssets();
       setAssets(assetsData);
 
       // 模拟合规性检查
@@ -77,7 +75,7 @@ export default function ComplianceReportPage() {
           isCompliant = false;
         }
 
-        if (asset.purchasePrice > 50000 && !asset.tags?.includes('高价值')) {
+        if (asset.cost && asset.cost > 50000 && !asset.tags?.includes('高价值')) {
           issues.push({
             assetId: asset.id,
             assetName: asset.name,

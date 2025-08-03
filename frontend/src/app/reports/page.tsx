@@ -17,13 +17,11 @@ import {
   Database
 } from 'lucide-react';
 import { 
-  fetchAssets,
-  fetchWorkflows,
+  getAssets,
+  getWorkflows,
   AssetData,
   WorkflowData,
-  downloadInventoryReport,
-  downloadLifecycleReport,
-  downloadComplianceReport
+  generateReport
 } from '@/services/api';
 
 interface ReportData {
@@ -178,8 +176,8 @@ export default function ReportsPage() {
     try {
       setLoading(true);
       const [assetsResponse, workflowsResponse] = await Promise.all([
-        fetchAssets(),
-        fetchWorkflows()
+        getAssets(),
+        getWorkflows()
       ]);
       
       setAssets(assetsResponse.data || []);
@@ -210,7 +208,7 @@ export default function ReportsPage() {
       setReportData(prev => ({ ...prev, inventory: inventoryData }));
       
       // 下载CSV报告
-      await downloadInventoryReport();
+      await generateReport('inventory');
       
     } catch (error) {
       console.error('Failed to generate inventory report:', error);
@@ -249,7 +247,7 @@ export default function ReportsPage() {
       }
       
       // 下载CSV报告
-      await downloadLifecycleReport();
+      await generateReport('lifecycle');
       
     } catch (error) {
       console.error('Failed to generate lifecycle report:', error);
@@ -280,7 +278,7 @@ export default function ReportsPage() {
       }
       
       // 下载CSV报告
-      await downloadComplianceReport();
+      await generateReport('compliance');
       
     } catch (error) {
       console.error('Failed to generate compliance report:', error);

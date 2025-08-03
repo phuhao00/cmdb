@@ -19,7 +19,7 @@ import {
   Settings,
   Trash2
 } from 'lucide-react';
-import { fetchWorkflows, approveWorkflow, rejectWorkflow, WorkflowData } from '@/services/api';
+import { getWorkflows, approveWorkflow, rejectWorkflow, WorkflowData } from '@/services/api';
 
 const statusConfig = {
   pending: { label: '待审批', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
@@ -168,7 +168,7 @@ export default function WorkflowsPage() {
   const loadWorkflows = async () => {
     try {
       setLoading(true);
-      const response = await fetchWorkflows();
+      const response = await getWorkflows();
       setWorkflows(response.data || []);
     } catch (error) {
       console.error('Failed to load workflows:', error);

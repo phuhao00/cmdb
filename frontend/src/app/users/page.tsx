@@ -1,365 +1,481 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Layout } from '@/components/Layout';
-import { apiService } from '@/services/api';
 import { 
+  Users, 
   UserPlus, 
-  User, 
-  Edit2, 
-  Lock, 
-  Shield, 
+  Search, 
+  Filter, 
   MoreVertical,
-  Search,
-  Filter
+  Edit,
+  Trash2,
+  UserCheck,
+  UserX,
+  Mail,
+  Phone,
+  Building,
+  Calendar,
+  Eye,
+  EyeOff
 } from 'lucide-react';
-
-interface UserData {
-  id: string;
-  username: string;
-  email: string;
-  role: string;
-  status: 'active' | 'inactive' | 'locked';
-  createdAt: string;
-  lastLogin?: string;
-}
+import { getUsers, createUser, updateUserStatus, UserData } from '@/services/api';
 
 export default function UsersPage() {
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showAddUser, setShowAddUser] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterRole, setFilterRole] = useState<string>('all');
-  const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    fullName: '',
+    password: '',
+    role: 'user',
+    department: '',
+    phone: ''
+  });
 
   useEffect(() => {
-    fetchUsers();
+    loadUsers();
   }, []);
 
-  const fetchUsers = async () => {
+  const loadUsers = async () => {
     try {
       setLoading(true);
-      const response = await apiService.getUsers();
-      setUsers(response.data);
-    } catch (error) {
-      console.error('Failed to fetch users:', error);
+      setError(null);
+      const data = await getUsers();
+      setUsers(data);
+    } catch (err) {
+      console.error('Failed to load users:', err);
+      setError('加载用户列表失败');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAddUser = async (userData: Partial<UserData>) => {
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
-      await apiService.createUser(userData);
-      await fetchUsers();
-      setShowAddUser(false);
-    } catch (error) {
-      console.error('Failed to create user:', error);
+              await createUser(formData);
+      setShowCreateModal(false);
+      setFormData({
+        username: '',
+        email: '',
+        fullName: '',
+        password: '',
+        role: 'user',
+        department: '',
+        phone: ''
+      });
+      loadUsers();
+    } catch (err) {
+      console.error('Failed to create user:', err);
+      setError('创建用户失败');
     }
   };
 
   const handleUpdateUserStatus = async (userId: string, status: string) => {
     try {
-      await apiService.updateUserStatus(userId, status);
-      await fetchUsers();
-    } catch (error) {
-      console.error('Failed to update user status:', error);
+              await updateUserStatus(userId, status);
+      loadUsers();
+    } catch (err) {
+      console.error('Failed to update user status:', err);
+      setError('更新用户状态失败');
     }
   };
 
-  const handleResetPassword = async (userId: string) => {
-    const newPassword = prompt('请输入新密码：');
-    if (newPassword) {
-      try {
-        // TODO: 实现重置密码API
-        console.log('Reset password for user:', userId);
-        alert('密码重置成功！');
-      } catch (error) {
-        console.error('Failed to reset password:', error);
-      }
-    }
+  const handleEditUser = (user: UserData) => {
+    setSelectedUser(user);
+    setFormData({
+      username: user.username,
+      email: user.email,
+      fullName: user.fullName,
+      password: '',
+      role: user.role,
+      department: user.department || '',
+      phone: ''
+    });
+    setShowEditModal(true);
   };
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = filterRole === 'all' || user.role === filterRole;
-    return matchesSearch && matchesRole;
+    const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
+    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
+    return matchesSearch && matchesStatus && matchesRole;
   });
 
-  const getRoleBadgeColor = (role: string) => {
-    switch (role) {
-      case 'admin':
-        return 'bg-purple-100 text-purple-800';
-      case 'manager':
-        return 'bg-blue-100 text-blue-800';
-      case 'user':
-        return 'bg-gray-100 text-gray-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getStatusBadgeColor = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'bg-green-100 text-green-800';
-      case 'inactive':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'locked':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <span className="ml-2">加载用户中...</span>
+      </div>
+    );
+  }
 
   return (
-    <Layout
-      breadcrumbs={[
-        { label: '首页', href: '/' },
-        { label: '用户管理' }
-      ]}
-      title="用户管理"
-    >
-      <div className="bg-white rounded-lg shadow">
-        {/* 工具栏 */}
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex flex-col sm:flex-row gap-4 flex-1">
-              {/* 搜索框 */}
-              <div className="relative flex-1 max-w-md">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="搜索用户名或邮箱..."
-                />
-              </div>
-              
-              {/* 角色过滤 */}
-              <div className="flex items-center gap-2">
-                <Filter className="h-5 w-5 text-gray-400" />
-                <select
-                  value={filterRole}
-                  onChange={(e) => setFilterRole(e.target.value)}
-                  className="border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="all">所有角色</option>
-                  <option value="admin">管理员</option>
-                  <option value="manager">经理</option>
-                  <option value="user">用户</option>
-                </select>
-              </div>
-            </div>
-
-            {/* 添加用户按钮 */}
-            <button
-              onClick={() => setShowAddUser(true)}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              <UserPlus className="h-4 w-4 mr-2" />
-              添加用户
-            </button>
-          </div>
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center">
+            <Users className="mr-2 h-8 w-8" />
+            用户管理
+          </h1>
+          <p className="text-gray-600 mt-2">
+            管理系统用户、权限和状态
+          </p>
         </div>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center"
+        >
+          <UserPlus className="h-4 w-4 mr-2" />
+          添加用户
+        </button>
+      </div>
 
-        {/* 用户列表 */}
-        <div className="overflow-x-auto">
-          {loading ? (
-            <div className="text-center py-12">
-              <div className="inline-flex items-center">
-                <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-                加载中...
-              </div>
-            </div>
-          ) : filteredUsers.length === 0 ? (
-            <div className="text-center py-12">
-              <User className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">没有找到用户</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                {searchTerm || filterRole !== 'all' ? '尝试调整搜索条件' : '点击"添加用户"创建第一个用户'}
-              </p>
-            </div>
-          ) : (
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    用户
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    角色
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    状态
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    创建时间
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    最后登录
-                  </th>
-                  <th className="relative px-6 py-3">
-                    <span className="sr-only">操作</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredUsers.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10">
-                          <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                            <User className="h-5 w-5 text-gray-600" />
-                          </div>
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">{user.username}</div>
-                          <div className="text-sm text-gray-500">{user.email}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeColor(user.role)}`}>
-                        {user.role === 'admin' ? '管理员' : user.role === 'manager' ? '经理' : '用户'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeColor(user.status)}`}>
-                        {user.status === 'active' ? '活跃' : user.status === 'inactive' ? '未激活' : '已锁定'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(user.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : '从未登录'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => {
-                            setSelectedUser(user);
-                            setShowEditModal(true);
-                          }}
-                          className="text-blue-600 hover:text-blue-900"
-                          title="编辑用户"
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleResetPassword(user.id)}
-                          className="text-yellow-600 hover:text-yellow-900"
-                          title="重置密码"
-                        >
-                          <Lock className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => {
-                            const newStatus = user.status === 'active' ? 'inactive' : 'active';
-                            handleUpdateUserStatus(user.id, newStatus);
-                          }}
-                          className={user.status === 'active' ? 'text-red-600 hover:text-red-900' : 'text-green-600 hover:text-green-900'}
-                          title={user.status === 'active' ? '禁用用户' : '启用用户'}
-                        >
-                          <Shield className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+      {error && (
+        <div className="p-4 bg-red-50 text-red-800 rounded-lg">
+          {error}
+        </div>
+      )}
+
+      {/* 搜索和过滤 */}
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <input
+              type="text"
+              placeholder="搜索用户..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">所有状态</option>
+            <option value="active">活跃</option>
+            <option value="inactive">非活跃</option>
+            <option value="suspended">已暂停</option>
+          </select>
+          <select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">所有角色</option>
+            <option value="admin">管理员</option>
+            <option value="user">普通用户</option>
+            <option value="viewer">只读用户</option>
+          </select>
+          <button
+            onClick={loadUsers}
+            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-center"
+          >
+            <Filter className="h-4 w-4 mr-2" />
+            刷新
+          </button>
         </div>
       </div>
 
-      {/* 添加用户模态框 */}
-      {showAddUser && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">添加新用户</h3>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const formData = new FormData(e.currentTarget);
-                handleAddUser({
-                  username: formData.get('username') as string,
-                  email: formData.get('email') as string,
-                  role: formData.get('role') as string,
-                  status: 'active'
-                });
-              }}
-            >
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">用户名</label>
-                  <input
-                    type="text"
-                    name="username"
-                    required
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">邮箱</label>
-                  <input
-                    type="email"
-                    name="email"
-                    required
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">密码</label>
-                  <input
-                    type="password"
-                    name="password"
-                    required
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">角色</label>
-                  <select
-                    name="role"
-                    required
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="user">用户</option>
-                    <option value="manager">经理</option>
-                    <option value="admin">管理员</option>
-                  </select>
-                </div>
+      {/* 用户列表 */}
+      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  用户信息
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  角色
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  部门
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  状态
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  创建时间
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  操作
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredUsers.map((user) => (
+                <tr key={user.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                        <span className="text-blue-600 font-semibold">
+                          {user.fullName.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="ml-4">
+                        <div className="text-sm font-medium text-gray-900">
+                          {user.fullName}
+                        </div>
+                        <div className="text-sm text-gray-500 flex items-center">
+                          <Mail className="h-3 w-3 mr-1" />
+                          {user.email}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          @{user.username}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                      user.role === 'admin' ? 'bg-red-100 text-red-800' :
+                      user.role === 'user' ? 'bg-blue-100 text-blue-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {user.role === 'admin' ? '管理员' :
+                       user.role === 'user' ? '普通用户' :
+                       user.role === 'viewer' ? '只读用户' : user.role}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <Building className="h-4 w-4 text-gray-400 mr-2" />
+                      <span className="text-sm text-gray-900">
+                        {user.department || '未分配'}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                      user.status === 'active' ? 'bg-green-100 text-green-800' :
+                      user.status === 'inactive' ? 'bg-gray-100 text-gray-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {user.status === 'active' ? '活跃' :
+                       user.status === 'inactive' ? '非活跃' :
+                       user.status === 'suspended' ? '已暂停' : user.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <Calendar className="h-4 w-4 text-gray-400 mr-2" />
+                      <span className="text-sm text-gray-900">
+                        {new Date(user.createdAt).toLocaleDateString('zh-CN')}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => handleEditUser(user)}
+                        className="text-blue-600 hover:text-blue-900"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </button>
+                      {user.status === 'active' ? (
+                        <button
+                          onClick={() => handleUpdateUserStatus(user.id, 'suspended')}
+                          className="text-yellow-600 hover:text-yellow-900"
+                          title="暂停用户"
+                        >
+                          <UserX className="h-4 w-4" />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleUpdateUserStatus(user.id, 'active')}
+                          className="text-green-600 hover:text-green-900"
+                          title="激活用户"
+                        >
+                          <UserCheck className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* 创建用户模态框 */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">创建新用户</h3>
+            <form onSubmit={handleCreateUser} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">用户名</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.username}
+                  onChange={(e) => setFormData({...formData, username: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
               </div>
-              <div className="mt-6 flex justify-end gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">邮箱</label>
+                <input
+                  type="email"
+                  required
+                  value={formData.email}
+                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">姓名</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.fullName}
+                  onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">密码</label>
+                <input
+                  type="password"
+                  required
+                  value={formData.password}
+                  onChange={(e) => setFormData({...formData, password: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">角色</label>
+                <select
+                  value={formData.role}
+                  onChange={(e) => setFormData({...formData, role: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="user">普通用户</option>
+                  <option value="admin">管理员</option>
+                  <option value="viewer">只读用户</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">部门</label>
+                <input
+                  type="text"
+                  value={formData.department}
+                  onChange={(e) => setFormData({...formData, department: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex justify-end space-x-3">
                 <button
                   type="button"
-                  onClick={() => setShowAddUser(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  onClick={() => setShowCreateModal(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
                 >
                   取消
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                 >
-                  添加
+                  创建用户
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
-    </Layout>
+
+      {/* 编辑用户模态框 */}
+      {showEditModal && selectedUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">编辑用户</h3>
+            <form onSubmit={handleCreateUser} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">用户名</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.username}
+                  onChange={(e) => setFormData({...formData, username: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">邮箱</label>
+                <input
+                  type="email"
+                  required
+                  value={formData.email}
+                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">姓名</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.fullName}
+                  onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">角色</label>
+                <select
+                  value={formData.role}
+                  onChange={(e) => setFormData({...formData, role: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="user">普通用户</option>
+                  <option value="admin">管理员</option>
+                  <option value="viewer">只读用户</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">部门</label>
+                <input
+                  type="text"
+                  value={formData.department}
+                  onChange={(e) => setFormData({...formData, department: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+                >
+                  取消
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  保存更改
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, X, Tag } from 'lucide-react';
-import { apiService } from '@/services/api';
+import { getDepartments, getOwners, getAllTags } from '@/services/api';
 
 interface AssetSearchProps {
   onSearch: (criteria: any) => void;

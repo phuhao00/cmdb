@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Clock, User, Info, TrendingUp, TrendingDown, Edit, Tag } from 'lucide-react';
-import { apiService } from '@/services/api';
+import { getAssetHistory } from '@/services/api';
 
 interface AssetHistoryRecord {
   id: string;
@@ -37,7 +37,7 @@ export default function AssetHistory({ assetId, assetName }: AssetHistoryProps) 
   const fetchHistory = async () => {
     try {
       setLoading(true);
-      const response = await apiService.getAssetHistory(assetId, filter);
+      const response = await getAssetHistory(assetId);
       setHistory(response.history || []);
     } catch (error) {
       console.error('Failed to fetch asset history:', error);

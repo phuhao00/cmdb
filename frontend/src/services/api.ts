@@ -1,525 +1,497 @@
 import axios, { AxiosResponse } from 'axios';
-import apiConfig from '@/config/api';
 
-// API Configuration - 从配置文件获取
-const API_BASE_URL = apiConfig.API_BASE_URL;
-const AI_API_BASE_URL = apiConfig.AI_API_BASE_URL;
+// API配置
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8082/api/v1';
+const AI_API_BASE_URL = process.env.NEXT_PUBLIC_AI_API_BASE_URL || 'http://localhost:8082/api';
 
-// 接口定义
+// 创建axios实例
+const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT || '10000'),
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  withCredentials: true, // 支持cookie认证
+});
+
+// 请求拦截器 - 添加认证token
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// 响应拦截器 - 处理认证错误
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // 清除本地存储的认证信息
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user');
+      // 重定向到登录页面
+      window.location.href = '/';
+    }
+    return Promise.reject(error);
+  }
+);
+
+// AI API客户端
+const aiApiClient = axios.create({
+  baseURL: AI_API_BASE_URL,
+  timeout: parseInt(process.env.NEXT_PUBLIC_AI_API_TIMEOUT || '30000'),
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  withCredentials: true,
+});
+
+// AI API请求拦截器
+aiApiClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// 类型定义
 export interface AssetData {
   id: string;
   name: string;
   type: string;
-  status: 'online' | 'offline' | 'maintenance' | 'decommissioned';
+  status: string;
   location: string;
-  description: string;
-  purchasePrice: number;
-  annualCost: number;
   department?: string;
   owner?: string;
   ipAddress?: string;
   tags?: string[];
+  cost?: number;
+  purchaseDate?: string;
+  warrantyExpiry?: string;
+  lastMaintenance?: string;
+  nextMaintenance?: string;
+  criticality?: string;
+  description?: string;
+  serialNumber?: string;
+  manufacturer?: string;
+  model?: string;
+  specifications?: Record<string, any>;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface WorkflowData {
-  id: string;
-  name: string;
-  description: string;
-  status: 'pending' | 'approved' | 'rejected' | 'completed';
-  type: 'asset_create' | 'asset_update' | 'asset_delete' | 'maintenance' | 'decommission';
-  assetId?: string;
-  assetName?: string;
-  requestedBy: string;
-  assignedTo?: string;
-  requestData?: Record<string, unknown>;
-  approvalComments?: string;
-  createdAt: string;
-  updatedAt: string;
-  completedAt?: string;
+export interface AssetFilter {
+  type?: string;
+  status?: string;
+  location?: string;
+  department?: string;
+  owner?: string;
+  fromDate?: string;
+  toDate?: string;
+  page?: number;
+  limit?: number;
+  search?: string;
 }
 
 export interface AssetStats {
   total: number;
-  online: number;
-  offline: number;
-  maintenance: number;
-  decommissioned: number;
-  totalValue: number;
-  annualCost: number;
   byType: Record<string, number>;
+  byStatus: Record<string, number>;
   byLocation: Record<string, number>;
   byDepartment: Record<string, number>;
-  recentChanges: number;
+  totalCost: number;
+  averageCost: number;
+  criticalAssets: number;
+  maintenanceDue: number;
+}
+
+export interface WorkflowData {
+  id: string;
+  type: string;
+  status: string;
+  assetId: string;
+  assetName: string;
+  requesterId: string;
+  requesterName: string;
+  approverId?: string;
+  approverName?: string;
+  reason: string;
+  details?: Record<string, any>;
+  createdAt: string;
+  updatedAt: string;
+  approvedAt?: string;
+  rejectedAt?: string;
+}
+
+export interface WorkflowFilter {
+  type?: string;
+  status?: string;
+  requesterId?: string;
+  approverId?: string;
+  page?: number;
+  limit?: number;
 }
 
 export interface WorkflowStats {
+  total: number;
   pending: number;
   approved: number;
   rejected: number;
-  completed: number;
+  byType: Record<string, number>;
+  averageProcessingTime: number;
 }
 
-interface ChatResponse {
-  message: string;
-  suggestions?: string[];
+export interface UserData {
+  id: string;
+  username: string;
+  email: string;
+  fullName: string;
+  role: string;
+  status: string;
+  department?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-// Create axios instance
-const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: apiConfig.API_TIMEOUT,
-});
+export interface LoginRequest {
+  username: string;
+  password: string;
+}
 
-// Add request interceptor to include auth token
-apiClient.interceptors.request.use(
-  (config) => {
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('auth_token');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
+export interface LoginResponse {
+  token: string;
+  user: UserData;
+}
 
-// Assets API
-export const fetchAssets = (): Promise<AxiosResponse<AssetData[]>> => {
-  return apiClient.get('/assets');
-};
-
-export const fetchAssetById = (id: string): Promise<AxiosResponse<AssetData>> => {
-  return apiClient.get(`/assets/${id}`);
-};
-
-export const createAsset = (assetData: AssetData): Promise<AxiosResponse<AssetData>> => {
-  return apiClient.post('/assets', assetData);
-};
-
-export const updateAsset = (id: string, assetData: Partial<AssetData>): Promise<AxiosResponse<AssetData>> => {
-  return apiClient.put(`/assets/${id}`, assetData);
-};
-
-export const deleteAsset = (id: string): Promise<AxiosResponse<void>> => {
-  return apiClient.delete(`/assets/${id}`);
-};
-
-export const bulkCreateAssets = (assetsData: AssetData[]): Promise<AxiosResponse<{ message: string; assetsCreated: number }>> => {
-  return apiClient.post('/assets/bulk', assetsData);
-};
-
-export const fetchAssetStats = (): Promise<AxiosResponse<AssetStats>> => {
-  return apiClient.get('/assets/stats');
-};
-
-export const fetchAssetTypes = (): Promise<AxiosResponse<string[]>> => {
-  return apiClient.get('/assets/types');
-};
-
-export const fetchAssetLocations = (): Promise<AxiosResponse<string[]>> => {
-  return apiClient.get('/assets/locations');
-};
-
-export const fetchAssetCosts = (): Promise<AxiosResponse<Record<string, unknown>>> => {
-  return apiClient.get('/assets/costs');
-};
-
-export const fetchCriticalAssets = (): Promise<AxiosResponse<AssetData[]>> => {
-  return apiClient.get('/assets/critical');
-};
-
-export const updateAssetCosts = (id: string, costsData: Record<string, unknown>): Promise<AxiosResponse<Record<string, unknown>>> => {
-  return apiClient.put(`/assets/${id}/costs`, costsData);
-};
-
-// Alias functions for backward compatibility
-export const getAssets = fetchAssets;
-export const getAsset = fetchAssetById;
-export const getAssetStats = fetchAssetStats;
-export const getAssetTypes = fetchAssetTypes;
-export const getAssetLocations = fetchAssetLocations;
-export const getAssetCosts = fetchAssetCosts;
-export const getCriticalAssets = fetchCriticalAssets;
-
-// Asset action functions
-export const requestDecommission = (assetId: string): Promise<AxiosResponse<AssetData>> => {
-  return apiClient.post(`/assets/${assetId}/decommission`);
-};
-
-export const exportAssets = (format: string = 'json'): Promise<AxiosResponse<AssetData[]>> => {
-  return apiClient.get(`/assets/export?format=${format}`);
-};
-
-export const exportAssetsCSV = (): Promise<AxiosResponse<Blob>> => {
-  return apiClient.get('/assets/export?format=csv', { responseType: 'blob' });
-};
-
-export const importAssets = (formData: FormData): Promise<AxiosResponse<{ 
-  success: number; 
-  failed: number; 
-  errors?: Array<{ row: number; field: string; message: string }> 
-}>> => {
-  return apiClient.post('/assets/import', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
-};
-
-// Workflows API
-export const fetchWorkflows = (): Promise<AxiosResponse<WorkflowData[]>> => {
-  return apiClient.get('/workflows');
-};
-
-export const createWorkflow = (workflowData: WorkflowData): Promise<AxiosResponse<WorkflowData>> => {
-  return apiClient.post('/workflows', workflowData);
-};
-
-export const updateWorkflow = (id: string, workflowData: Partial<WorkflowData>): Promise<AxiosResponse<WorkflowData>> => {
-  return apiClient.put(`/workflows/${id}`, workflowData);
-};
-
-export const approveWorkflow = (id: string, comments?: string): Promise<AxiosResponse<WorkflowData>> => {
-  return apiClient.put(`/workflows/${id}/approve`, { comments });
-};
-
-export const rejectWorkflow = (id: string, comments?: string): Promise<AxiosResponse<WorkflowData>> => {
-  return apiClient.put(`/workflows/${id}/reject`, { comments });
-};
-
-export const fetchWorkflowStats = (): Promise<AxiosResponse<WorkflowStats>> => {
-  return apiClient.get('/workflows/stats');
-};
-
-// Workflow alias functions
-export const getWorkflows = fetchWorkflows;
-export const getWorkflow = (id: string): Promise<AxiosResponse<WorkflowData>> => {
-  return apiClient.get(`/workflows/${id}`);
-};
-export const getWorkflowStats = fetchWorkflowStats;
-export const getPendingWorkflows = (): Promise<AxiosResponse<WorkflowData[]>> => {
-  return apiClient.get('/workflows/pending');
-};
-
-// User and Auth functions
-export const login = async (username: string, password: string): Promise<AxiosResponse<{ token: string; user: any }>> => {
-  return apiClient.post('/auth/login', { username, password });
-};
-
-export const logout = async (): Promise<AxiosResponse<void>> => {
-  return apiClient.post('/auth/logout');
-};
-
-export const getCurrentUser = async (): Promise<AxiosResponse<any>> => {
-  return apiClient.get('/auth/user');
-};
-
-export const changePassword = async (oldPassword: string, newPassword: string): Promise<AxiosResponse<void>> => {
-  return apiClient.post('/auth/change-password', { oldPassword, newPassword });
-};
-
-export const createUser = async (userData: any): Promise<AxiosResponse<any>> => {
-  return apiClient.post('/users', userData);
-};
-
-export const getUsers = async (): Promise<AxiosResponse<any[]>> => {
-  return apiClient.get('/users');
-};
-
-export const getUser = async (userId: string): Promise<AxiosResponse<any>> => {
-  return apiClient.get(`/users/${userId}`);
-};
-
-export const updateUserStatus = async (userId: string, status: string): Promise<AxiosResponse<any>> => {
-  return apiClient.put(`/users/${userId}/status`, { status });
-};
-
-// Feishu webhook
-export const handleFeishuWebhook = async (data: any): Promise<AxiosResponse<any>> => {
-  return apiClient.post('/webhook/feishu', data);
-};
-
-// AI Chat functions
-// sendChat alias will be added after sendChatMessage is defined
-
-// Reports API
-export const downloadInventoryReport = async (): Promise<void> => {
-  const response = await apiClient.get('/reports/inventory', {
-    responseType: 'blob',
-  });
-  
-  const url = window.URL.createObjectURL(new Blob([response.data]));
-  const link = document.createElement('a');
-  link.href = url;
-  link.setAttribute('download', `inventory-report-${new Date().toISOString().split('T')[0]}.csv`);
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  window.URL.revokeObjectURL(url);
-};
-
-export const downloadLifecycleReport = async (): Promise<void> => {
-  const response = await apiClient.get('/reports/lifecycle', {
-    responseType: 'blob',
-  });
-  
-  const url = window.URL.createObjectURL(new Blob([response.data]));
-  const link = document.createElement('a');
-  link.href = url;
-  link.setAttribute('download', `lifecycle-report-${new Date().toISOString().split('T')[0]}.csv`);
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  window.URL.revokeObjectURL(url);
-};
-
-export const downloadComplianceReport = async (): Promise<void> => {
-  const response = await apiClient.get('/reports/compliance', {
-    responseType: 'blob',
-  });
-  
-  const url = window.URL.createObjectURL(new Blob([response.data]));
-  const link = document.createElement('a');
-  link.href = url;
-  link.setAttribute('download', `compliance-report-${new Date().toISOString().split('T')[0]}.csv`);
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  window.URL.revokeObjectURL(url);
-};
-
-// Create AI API client
-const aiApiClient = axios.create({
-  baseURL: AI_API_BASE_URL,
-  timeout: apiConfig.AI_API_TIMEOUT,
-});
-
-// Add AI API interceptor for auth
-aiApiClient.interceptors.request.use(
-  (config) => {
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('auth_token');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// AI API
-export const sendChatMessage = async (message: string, language: string = 'zh'): Promise<AxiosResponse<ChatResponse>> => {
-  try {
-    if (typeof window === 'undefined') {
-      throw new Error('此功能仅在客户端可用');
-    }
-
-    // 检查token
-    const token = localStorage.getItem('auth_token');
-    console.log('🤖 调用AI API:', message, language);
-    console.log('🔑 Token存在:', !!token);
-    
-    // 如果没有token，提示用户重新登录
-    if (!token) {
-      throw new Error('请先登录系统');
-    }
-    
-    // 使用axios直接调用
-    const response = await axios.post('/api/ai/chat', {
-      message: message,
-      language: language
-    }, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      timeout: 30000
-    });
-    
-    console.log('✅ AI API 响应:', response.data);
-    return response;
-    
-  } catch (error: unknown) {
-    console.error('❌ AI API 错误:', error);
-    
-    // 检查是否是axios错误
-    if (error && typeof error === 'object' && 'response' in error) {
-      const axiosError = error as { response?: { status?: number; data?: unknown } };
-      console.error('❌ 错误详情:', axiosError.response?.data);
-      console.error('❌ 错误状态:', axiosError.response?.status);
-      
-      // 如果是401错误，提示重新登录
-      if (axiosError.response?.status === 401) {
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('auth_token');
-          localStorage.removeItem('user');
-        }
-        throw new Error('登录已过期，请重新登录');
-      }
-    }
-    
-    throw error;
-  }
-};
-
-// Alias for sendChatMessage
-export const sendChat = sendChatMessage;
-
-export const getAISuggestions = (): Promise<AxiosResponse<string[]>> => {
-  return aiApiClient.get('/ai/suggestions');
-};
-
-// Test AI API (no auth required)
-export const testAIChat = async (message: string, language: string = 'zh'): Promise<AxiosResponse<ChatResponse>> => {
-  try {
-    console.log('🧪 测试AI API (无认证):', message);
-    
-    const response = await apiClient.post('/ai/test', {
-      message: message,
-      language: language
-    });
-    
-    console.log('✅ AI测试成功:', response.data);
-    return response;
-    
-  } catch (error) {
-    console.error('❌ AI测试失败:', error);
-    throw error;
-  }
-};
-
-// Audit Log APIs
-export interface AuditLogSearchParams {
-  page?: number;
-  limit?: number;
-  userId?: string;
-  username?: string;
-  action?: string;
-  resourceType?: string;
-  resourceId?: string;
-  startDate?: string;
-  endDate?: string;
-  success?: boolean;
+export interface CreateAssetRequest {
+  name: string;
+  type: string;
+  status: string;
+  location: string;
+  department?: string;
+  owner?: string;
   ipAddress?: string;
-  sortBy?: string;
-  sortOrder?: string;
+  tags?: string[];
+  cost?: number;
+  purchaseDate?: string;
+  warrantyExpiry?: string;
+  description?: string;
+  serialNumber?: string;
+  manufacturer?: string;
+  model?: string;
+  specifications?: Record<string, any>;
 }
 
-// API service object
-export const apiService = {
-  // Existing APIs
-  getAssets,
-  getAsset,
-  createAsset,
-  updateAsset,
-  deleteAsset,
-  getAssetStats,
-  requestDecommission,
-  bulkCreateAssets,
-  getAssetTypes,
-  getAssetLocations,
-  getAssetCosts,
-  getCriticalAssets,
-  updateAssetCosts,
-  exportAssets,
-  exportAssetsCSV,
-  importAssets,
-  getWorkflows,
-  getWorkflow,
-  createWorkflow,
-  approveWorkflow,
-  rejectWorkflow,
-  getWorkflowStats,
-  getPendingWorkflows,
-  handleFeishuWebhook,
-  login,
-  logout,
-  getCurrentUser,
-  changePassword,
-  createUser,
-  getUsers,
-  getUser,
-  updateUserStatus,
-  sendChat,
-  getAISuggestions,
-  testAIChat,
-  
-  // Audit Log APIs
-  searchAuditLogs: async (params: AuditLogSearchParams) => {
-    const queryParams = new URLSearchParams();
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        queryParams.append(key, value.toString());
-      }
+export interface UpdateAssetRequest extends Partial<CreateAssetRequest> {
+  id: string;
+}
+
+export interface CreateWorkflowRequest {
+  type: string;
+  assetId: string;
+  reason: string;
+  details?: Record<string, any>;
+}
+
+export interface ApproveWorkflowRequest {
+  comment?: string;
+}
+
+export interface ImportResult {
+  success: boolean;
+  imported: number;
+  errors: Array<{ row: number; field: string; message: string }>;
+}
+
+export interface AssetHistoryEntry {
+  id: string;
+  assetId: string;
+  action: string;
+  userId: string;
+  userName: string;
+  details: Record<string, any>;
+  timestamp: string;
+}
+
+// API服务类
+class ApiService {
+  // 认证相关
+  async login(credentials: LoginRequest): Promise<LoginResponse> {
+    const response: AxiosResponse<LoginResponse> = await apiClient.post('/auth/login', credentials);
+    return response.data;
+  }
+
+  async logout(): Promise<void> {
+    await apiClient.post('/auth/logout');
+  }
+
+  async getCurrentUser(): Promise<UserData> {
+    const response: AxiosResponse<UserData> = await apiClient.get('/auth/me');
+    return response.data;
+  }
+
+  async changePassword(oldPassword: string, newPassword: string): Promise<void> {
+    await apiClient.post('/auth/change-password', { oldPassword, newPassword });
+  }
+
+  // 用户管理
+  async createUser(userData: Partial<UserData>): Promise<UserData> {
+    const response: AxiosResponse<UserData> = await apiClient.post('/users', userData);
+    return response.data;
+  }
+
+  async getUsers(): Promise<UserData[]> {
+    const response: AxiosResponse<UserData[]> = await apiClient.get('/users');
+    return response.data;
+  }
+
+  async getUser(id: string): Promise<UserData> {
+    const response: AxiosResponse<UserData> = await apiClient.get(`/users/${id}`);
+    return response.data;
+  }
+
+  async updateUserStatus(id: string, status: string): Promise<void> {
+    await apiClient.put(`/users/${id}/status`, { status });
+  }
+
+  // 资产管理
+  async fetchAssets(filter?: AssetFilter): Promise<AssetData[]> {
+    const response: AxiosResponse<AssetData[]> = await apiClient.get('/assets', { params: filter });
+    return response.data;
+  }
+
+  async fetchAssetById(id: string): Promise<AssetData> {
+    const response: AxiosResponse<AssetData> = await apiClient.get(`/assets/${id}`);
+    return response.data;
+  }
+
+  async createAsset(assetData: CreateAssetRequest): Promise<AssetData> {
+    const response: AxiosResponse<AssetData> = await apiClient.post('/assets', assetData);
+    return response.data;
+  }
+
+  async updateAsset(assetData: UpdateAssetRequest): Promise<AssetData> {
+    const response: AxiosResponse<AssetData> = await apiClient.put(`/assets/${assetData.id}`, assetData);
+    return response.data;
+  }
+
+  async deleteAsset(id: string): Promise<void> {
+    await apiClient.delete(`/assets/${id}`);
+  }
+
+  async fetchAssetStats(): Promise<AssetStats> {
+    const response: AxiosResponse<AssetStats> = await apiClient.get('/assets/stats');
+    return response.data;
+  }
+
+  async requestDecommission(id: string, reason: string): Promise<void> {
+    await apiClient.put(`/assets/${id}`, { status: 'decommissioned', reason });
+  }
+
+  async exportAssets(format: string): Promise<Blob> {
+    const response = await apiClient.get('/assets/export', {
+      params: { format },
+      responseType: 'blob',
     });
+    return response.data;
+  }
+
+  async exportAssetsCSV(): Promise<Blob> {
+    const response = await apiClient.get('/assets/export', {
+      params: { format: 'csv' },
+      responseType: 'blob',
+    });
+    return response.data;
+  }
+
+  async importAssets(file: File): Promise<ImportResult> {
+    const formData = new FormData();
+    formData.append('file', file);
     
-    const response = await apiClient.get(`/audit-logs?${queryParams.toString()}`);
+    const response: AxiosResponse<ImportResult> = await apiClient.post('/assets/bulk', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
-  },
-  
-  getUserActivityLogs: async (userId: string, limit: number = 100) => {
-    const response = await apiClient.get(`/audit-logs/user/${userId}?limit=${limit}`);
+  }
+
+  async getAssetHistory(id: string): Promise<AssetHistoryEntry[]> {
+    const response: AxiosResponse<AssetHistoryEntry[]> = await apiClient.get(`/assets/${id}/history`);
     return response.data;
-  },
-  
-  getResourceHistory: async (resourceType: string, resourceId: string, limit: number = 100) => {
-    const response = await apiClient.get(`/audit-logs/resource/${resourceType}/${resourceId}?limit=${limit}`);
+  }
+
+  // 工作流管理
+  async fetchWorkflows(filter?: WorkflowFilter): Promise<WorkflowData[]> {
+    const response: AxiosResponse<WorkflowData[]> = await apiClient.get('/workflows', { params: filter });
     return response.data;
-  },
-  
-  getAuditLogStats: async (startDate?: string, endDate?: string) => {
-    const params = new URLSearchParams();
-    if (startDate) params.append('startDate', startDate);
-    if (endDate) params.append('endDate', endDate);
-    
-    const response = await apiClient.get(`/audit-logs/stats?${params.toString()}`);
+  }
+
+  async fetchWorkflowById(id: string): Promise<WorkflowData> {
+    const response: AxiosResponse<WorkflowData> = await apiClient.get(`/workflows/${id}`);
     return response.data;
-  },
-  
-  // Asset History
-  getAssetHistory: async (assetId: string, filter?: string) => {
-    const params = filter ? `?filter=${filter}` : '';
-    const response = await apiClient.get(`/assets/${assetId}/history${params}`);
+  }
+
+  async createWorkflow(workflowData: CreateWorkflowRequest): Promise<WorkflowData> {
+    const response: AxiosResponse<WorkflowData> = await apiClient.post('/workflows', workflowData);
     return response.data;
-  },
-  
-  // Asset Tag APIs
-  addAssetTags: async (assetId: string, tags: string[]) => {
-    const response = await apiClient.post(`/assets/${assetId}/tags`, { tags });
+  }
+
+  async approveWorkflow(id: string, comment?: string): Promise<void> {
+    await apiClient.put(`/workflows/${id}/approve`, { comment });
+  }
+
+  async rejectWorkflow(id: string, comment?: string): Promise<void> {
+    await apiClient.put(`/workflows/${id}/reject`, { comment });
+  }
+
+  async fetchWorkflowStats(): Promise<WorkflowStats> {
+    const response: AxiosResponse<WorkflowStats> = await apiClient.get('/workflows/stats');
     return response.data;
-  },
-  
-  removeAssetTag: async (assetId: string, tag: string) => {
-    const response = await apiClient.delete(`/assets/${assetId}/tags/${tag}`);
+  }
+
+  async fetchPendingWorkflows(): Promise<WorkflowData[]> {
+    const response: AxiosResponse<WorkflowData[]> = await apiClient.get('/workflows', {
+      params: { status: 'pending' }
+    });
     return response.data;
-  },
-  
-  getAllTags: async () => {
-    const response = await apiClient.get('/assets/tags');
+  }
+
+  // AI聊天
+  async sendChatMessage(message: string, context?: string): Promise<string> {
+    const response: AxiosResponse<{ response: string }> = await aiApiClient.post('/ai/chat', {
+      message,
+      context,
+    });
+    return response.data.response;
+  }
+
+  // 飞书webhook
+  async handleFeishuWebhook(data: any): Promise<void> {
+    await apiClient.post('/feishu/webhook', data);
+  }
+
+  // 系统设置
+  async getSystemSettings(): Promise<any> {
+    const response = await apiClient.get('/settings');
     return response.data;
-  },
-  
-  // Advanced Asset Search
-  searchAssets: async (searchCriteria: any) => {
-    const response = await apiClient.post('/assets/search', searchCriteria);
+  }
+
+  async updateSystemSettings(settings: any): Promise<void> {
+    await apiClient.put('/settings', settings);
+  }
+
+  // 报告相关
+  async generateReport(type: string, filters?: any): Promise<Blob> {
+    const response = await apiClient.get(`/reports/${type}`, {
+      params: filters,
+      responseType: 'blob',
+    });
     return response.data;
-  },
-  
-  getDepartments: async () => {
-    const response = await apiClient.get('/assets/departments');
+  }
+
+  // 搜索和过滤
+  async searchAssets(query: string, filters?: AssetFilter): Promise<AssetData[]> {
+    const response: AxiosResponse<AssetData[]> = await apiClient.post('/assets/search', {
+      query,
+      filters,
+    });
     return response.data;
-  },
-  
-  getOwners: async () => {
-    const response = await apiClient.get('/assets/owners');
+  }
+
+  async getAssetTypes(): Promise<string[]> {
+    const response: AxiosResponse<string[]> = await apiClient.get('/assets/types');
     return response.data;
-  },
-};
+  }
+
+  async getAssetLocations(): Promise<string[]> {
+    const response: AxiosResponse<string[]> = await apiClient.get('/assets/locations');
+    return response.data;
+  }
+
+  async getDepartments(): Promise<string[]> {
+    const response: AxiosResponse<string[]> = await apiClient.get('/assets/departments');
+    return response.data;
+  }
+
+  async getOwners(): Promise<string[]> {
+    const response: AxiosResponse<string[]> = await apiClient.get('/assets/owners');
+    return response.data;
+  }
+
+  async getAllTags(): Promise<string[]> {
+    const response: AxiosResponse<string[]> = await apiClient.get('/assets/tags');
+    return response.data;
+  }
+
+  async addTags(assetId: string, tags: string[]): Promise<void> {
+    await apiClient.post(`/assets/${assetId}/tags`, { tags });
+  }
+
+  async removeTag(assetId: string, tag: string): Promise<void> {
+    await apiClient.delete(`/assets/${assetId}/tags/${tag}`);
+  }
+}
+
+// 创建API服务实例
+export const apiService = new ApiService();
+
+// 向后兼容的别名
+export const getAssets = apiService.fetchAssets.bind(apiService);
+export const getAsset = apiService.fetchAssetById.bind(apiService);
+export const getAssetStats = apiService.fetchAssetStats.bind(apiService);
+export const createAsset = apiService.createAsset.bind(apiService);
+export const updateAsset = apiService.updateAsset.bind(apiService);
+export const deleteAsset = apiService.deleteAsset.bind(apiService);
+export const exportAssets = apiService.exportAssets.bind(apiService);
+export const exportAssetsCSV = apiService.exportAssetsCSV.bind(apiService);
+export const importAssets = apiService.importAssets.bind(apiService);
+export const getAssetHistory = apiService.getAssetHistory.bind(apiService);
+
+export const getWorkflows = apiService.fetchWorkflows.bind(apiService);
+export const getWorkflow = apiService.fetchWorkflowById.bind(apiService);
+export const getWorkflowStats = apiService.fetchWorkflowStats.bind(apiService);
+export const getPendingWorkflows = apiService.fetchPendingWorkflows.bind(apiService);
+export const createWorkflow = apiService.createWorkflow.bind(apiService);
+export const approveWorkflow = apiService.approveWorkflow.bind(apiService);
+export const rejectWorkflow = apiService.rejectWorkflow.bind(apiService);
+
+export const login = apiService.login.bind(apiService);
+export const logout = apiService.logout.bind(apiService);
+export const getCurrentUser = apiService.getCurrentUser.bind(apiService);
+export const changePassword = apiService.changePassword.bind(apiService);
+export const createUser = apiService.createUser.bind(apiService);
+export const getUsers = apiService.getUsers.bind(apiService);
+export const getUser = apiService.getUser.bind(apiService);
+export const updateUserStatus = apiService.updateUserStatus.bind(apiService);
+
+export const sendChat = apiService.sendChatMessage.bind(apiService);
+export const handleFeishuWebhook = apiService.handleFeishuWebhook.bind(apiService);
+
+export const getSystemSettings = apiService.getSystemSettings.bind(apiService);
+export const updateSystemSettings = apiService.updateSystemSettings.bind(apiService);
+
+export const generateReport = apiService.generateReport.bind(apiService);
+export const searchAssets = apiService.searchAssets.bind(apiService);
+export const getAssetTypes = apiService.getAssetTypes.bind(apiService);
+export const getAssetLocations = apiService.getAssetLocations.bind(apiService);
+export const getDepartments = apiService.getDepartments.bind(apiService);
+export const getOwners = apiService.getOwners.bind(apiService);
+export const getAllTags = apiService.getAllTags.bind(apiService);
+export const addTags = apiService.addTags.bind(apiService);
+export const removeTag = apiService.removeTag.bind(apiService);
+
+export default apiService;
