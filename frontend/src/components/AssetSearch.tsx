@@ -32,14 +32,14 @@ export default function AssetSearch({ onSearch }: AssetSearchProps) {
   const loadFilterOptions = async () => {
     try {
       const [deptRes, ownerRes, tagRes] = await Promise.all([
-        apiService.getDepartments(),
-        apiService.getOwners(),
-        apiService.getAllTags(),
+        getDepartments(),
+        getOwners(),
+        getAllTags(),
       ]);
       
-      setDepartments(deptRes.departments || []);
-      setOwners(ownerRes.owners || []);
-      setTags(tagRes.tags || []);
+      setDepartments(deptRes || []);
+      setOwners(ownerRes || []);
+      setTags(tagRes || []);
     } catch (error) {
       console.error('Failed to load filter options:', error);
     }

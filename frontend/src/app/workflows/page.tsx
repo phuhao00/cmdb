@@ -75,15 +75,15 @@ function ApprovalModal({ workflow, isOpen, onClose, onApprove, onReject }: Appro
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-gray-500">工作流名称:</span>
-                <p className="font-medium">{workflow.name}</p>
+                <p className="font-medium">{workflow.assetName}</p>
               </div>
               <div>
                 <span className="text-gray-500">类型:</span>
-                <p className="font-medium">{typeConfig[workflow.type]?.label}</p>
+                <p className="font-medium">{typeConfig[workflow.type as keyof typeof typeConfig]?.label}</p>
               </div>
               <div>
                 <span className="text-gray-500">申请人:</span>
-                <p className="font-medium">{workflow.requestedBy}</p>
+                <p className="font-medium">{workflow.requesterName}</p>
               </div>
               <div>
                 <span className="text-gray-500">创建时间:</span>
@@ -95,7 +95,7 @@ function ApprovalModal({ workflow, isOpen, onClose, onApprove, onReject }: Appro
           {/* 描述 */}
           <div>
             <h4 className="font-medium text-gray-900 mb-2">描述</h4>
-            <p className="text-gray-700 bg-gray-50 p-3 rounded-lg">{workflow.description}</p>
+            <p className="text-gray-700 bg-gray-50 p-3 rounded-lg">{workflow.reason}</p>
           </div>
 
           {/* 关联资产 */}
@@ -169,7 +169,7 @@ export default function WorkflowsPage() {
     try {
       setLoading(true);
       const response = await getWorkflows();
-      setWorkflows(response.data || []);
+      setWorkflows(response || []);
     } catch (error) {
       console.error('Failed to load workflows:', error);
     } finally {
@@ -203,9 +203,9 @@ export default function WorkflowsPage() {
   };
 
   const filteredWorkflows = workflows.filter(workflow => {
-    const matchesSearch = workflow.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         workflow.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         workflow.requestedBy.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = workflow.assetName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                       workflow.reason.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                       workflow.requesterName.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = filterStatus === 'all' || workflow.status === filterStatus;
     const matchesType = filterType === 'all' || workflow.type === filterType;
     
@@ -382,8 +382,8 @@ export default function WorkflowsPage() {
                   </tr>
                 ) : (
                   filteredWorkflows.map((workflow) => {
-                    const StatusIcon = statusConfig[workflow.status].icon;
-                    const TypeIcon = typeConfig[workflow.type]?.icon || GitMerge;
+                    const StatusIcon = statusConfig[workflow.status as keyof typeof statusConfig].icon;
+                    const TypeIcon = typeConfig[workflow.type as keyof typeof typeConfig]?.icon || GitMerge;
                     
                     return (
                       <tr key={workflow.id} className="hover:bg-gray-50">
@@ -391,8 +391,8 @@ export default function WorkflowsPage() {
                           <div className="flex items-center">
                             <TypeIcon className="w-5 h-5 text-gray-400 mr-3" />
                             <div>
-                              <div className="text-sm font-medium text-gray-900">{workflow.name}</div>
-                              <div className="text-sm text-gray-500 max-w-xs truncate">{workflow.description}</div>
+                              <div className="text-sm font-medium text-gray-900">{workflow.assetName}</div>
+                              <div className="text-sm text-gray-500 max-w-xs truncate">{workflow.reason}</div>
                               {workflow.assetName && (
                                 <div className="text-xs text-blue-600">关联: {workflow.assetName}</div>
                               )}
@@ -400,20 +400,20 @@ export default function WorkflowsPage() {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${typeConfig[workflow.type]?.color || 'bg-gray-100 text-gray-800'}`}>
-                            {typeConfig[workflow.type]?.label || workflow.type}
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${typeConfig[workflow.type as keyof typeof typeConfig]?.color || 'bg-gray-100 text-gray-800'}`}>
+                            {typeConfig[workflow.type as keyof typeof typeConfig]?.label || workflow.type}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig[workflow.status].color}`}>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig[workflow.status as keyof typeof statusConfig].color}`}>
                             <StatusIcon className="w-3 h-3 mr-1" />
-                            {statusConfig[workflow.status].label}
+                            {statusConfig[workflow.status as keyof typeof statusConfig].label}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <User className="w-4 h-4 text-gray-400 mr-2" />
-                            <span className="text-sm text-gray-900">{workflow.requestedBy}</span>
+                            <span className="text-sm text-gray-900">{workflow.requesterName}</span>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

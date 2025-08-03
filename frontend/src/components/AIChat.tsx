@@ -125,12 +125,12 @@ const AIChat: React.FC<AIChatProps> = ({ language = 'zh' }) => {
       setIsTyping(false);
       const aiMessage: Message = {
         id: Date.now() + 1,
-        content: response.data.message,
+        content: response,
         isUser: false,
         timestamp: new Date().toISOString(),
-        suggestions: response.data.suggestions || (language === 'en' 
+        suggestions: language === 'en' 
           ? ["Tell me more", "Show examples", "Help"] 
-          : ["了解更多", "显示示例", "帮助"])
+          : ["了解更多", "显示示例", "帮助"]
       };
       setMessages(prev => [...prev, aiMessage]);
       if (!isOpen) setUnreadCount(prev => prev + 1);

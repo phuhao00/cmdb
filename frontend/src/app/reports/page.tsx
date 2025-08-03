@@ -180,8 +180,8 @@ export default function ReportsPage() {
         getWorkflows()
       ]);
       
-      setAssets(assetsResponse.data || []);
-      setWorkflows(workflowsResponse.data || []);
+      setAssets(assetsResponse || []);
+      setWorkflows(workflowsResponse || []);
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {
@@ -199,8 +199,8 @@ export default function ReportsPage() {
         onlineAssets: assets.filter(a => a.status === 'online').length,
         offlineAssets: assets.filter(a => a.status === 'offline').length,
         maintenanceAssets: assets.filter(a => a.status === 'maintenance').length,
-        totalValue: assets.reduce((sum, a) => sum + (a.purchasePrice || 0), 0),
-        avgValue: Math.round(assets.reduce((sum, a) => sum + (a.purchasePrice || 0), 0) / assets.length || 0),
+        totalValue: assets.reduce((sum, a) => sum + (a.cost || 0), 0),
+        avgValue: Math.round(assets.reduce((sum, a) => sum + (a.cost || 0), 0) / assets.length || 0),
         assetTypes: [...new Set(assets.map(a => a.type))].length,
         locations: [...new Set(assets.map(a => a.location))].length
       };
@@ -339,7 +339,7 @@ export default function ReportsPage() {
       },
       {
         title: '总价值',
-        value: `¥${(assets.reduce((sum, a) => sum + (a.purchasePrice || 0), 0) / 10000).toFixed(1)}万`,
+        value: `¥${(assets.reduce((sum, a) => sum + (a.cost || 0), 0) / 10000).toFixed(1)}万`,
         change: { value: 8, isPositive: true },
         icon: DollarSign,
         color: 'bg-purple-500'
@@ -521,7 +521,7 @@ export default function ReportsPage() {
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">有价格信息的资产</span>
                   <span className="text-sm font-medium">
-                    {Math.round((assets.filter(a => a.purchasePrice).length / assets.length) * 100)}%
+                    {Math.round((assets.filter(a => a.cost).length / assets.length) * 100)}%
                   </span>
                 </div>
               </div>

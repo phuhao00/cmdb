@@ -45,9 +45,9 @@ export default function AssetImportExport() {
       
       const response = await importAssets(selectedFile);
       setImportResult({
-        success: response.data.success || 0,
-        failed: response.data.failed || 0,
-        errors: response.data.errors || [],
+        success: response.imported || 0,
+        failed: response.errors?.length || 0,
+        errors: response.errors || [],
       });
     } catch (error) {
       console.error('Import failed:', error);
@@ -68,11 +68,10 @@ export default function AssetImportExport() {
       let blob;
       
       if (exportFormat === 'csv') {
-        response = await exportAssetsCSV();
-        blob = response.data;
+        blob = await exportAssetsCSV();
       } else {
         response = await exportAssets(exportFormat);
-        blob = new Blob([JSON.stringify(response.data)], {
+        blob = new Blob([JSON.stringify(response)], {
           type: 'application/json',
         });
       }

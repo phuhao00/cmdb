@@ -23,8 +23,7 @@ export default function LifecycleReportPage() {
   const fetchLifecycleData = async () => {
     try {
       setLoading(true);
-      const response = await getAssets();
-      const assetsData = response.data;
+      const assetsData = await getAssets();
       setAssets(assetsData);
 
       // 计算生命周期数据
@@ -67,7 +66,7 @@ export default function LifecycleReportPage() {
         }
 
         // 计算折旧（简单线性折旧，5年）
-        const depreciation = asset.purchasePrice * Math.min(ageInYears / 5, 1);
+        const depreciation = (asset.cost || 0) * Math.min(ageInYears / 5, 1);
         depreciationTotal += depreciation;
       });
 

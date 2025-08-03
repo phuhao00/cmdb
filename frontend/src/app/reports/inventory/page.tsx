@@ -28,7 +28,7 @@ export default function InventoryReportPage() {
         getAssetStats()
       ]);
 
-      setAssets(assetsRes.data);
+      setAssets(assetsRes);
       
       // 计算统计数据
       const byType: Record<string, number> = {};
@@ -36,7 +36,7 @@ export default function InventoryReportPage() {
       const byLocation: Record<string, number> = {};
       let totalValue = 0;
 
-      assetsRes.data.forEach(asset => {
+      assetsRes.forEach(asset => {
         // 按类型统计
         byType[asset.type] = (byType[asset.type] || 0) + 1;
         
@@ -47,11 +47,11 @@ export default function InventoryReportPage() {
         byLocation[asset.location] = (byLocation[asset.location] || 0) + 1;
         
         // 计算总价值
-        totalValue += asset.purchasePrice || 0;
+        totalValue += asset.cost || 0;
       });
 
       setStats({
-        total: assetsRes.data.length,
+        total: assetsRes.length,
         byType,
         byStatus,
         byLocation,
@@ -67,8 +67,7 @@ export default function InventoryReportPage() {
   const handleDownload = async (format: 'excel' | 'pdf') => {
     try {
       if (format === 'excel') {
-        const response = await exportAssetsCSV();
-        const blob = response.data;
+        const blob = await exportAssetsCSV();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;

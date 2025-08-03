@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { getAssets, AssetData } from '@/services/api';
 import { Download, Shield, CheckCircle, XCircle, AlertTriangle, FileText } from 'lucide-react';
+import Layout from '@/components/Layout';
 
 export default function ComplianceReportPage() {
   const [assets, setAssets] = useState<AssetData[]>([]);

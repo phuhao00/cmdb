@@ -2,23 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Clock, User, Info, TrendingUp, TrendingDown, Edit, Tag } from 'lucide-react';
-import { getAssetHistory } from '@/services/api';
-
-interface AssetHistoryRecord {
-  id: string;
-  assetId: string;
-  assetName: string;
-  changeType: string;
-  changedBy: string;
-  changedById: string;
-  fieldChanges: Array<{
-    fieldName: string;
-    oldValue: any;
-    newValue: any;
-  }>;
-  changeReason: string;
-  timestamp: string;
-}
+import { getAssetHistory, AssetHistoryEntry } from '@/services/api';
 
 interface AssetHistoryProps {
   assetId: string;
@@ -26,7 +10,7 @@ interface AssetHistoryProps {
 }
 
 export default function AssetHistory({ assetId, assetName }: AssetHistoryProps) {
-  const [history, setHistory] = useState<AssetHistoryRecord[]>([]);
+  const [history, setHistory] = useState<AssetHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
 
@@ -38,7 +22,7 @@ export default function AssetHistory({ assetId, assetName }: AssetHistoryProps) 
     try {
       setLoading(true);
       const response = await getAssetHistory(assetId);
-      setHistory(response.history || []);
+      setHistory(response || []);
     } catch (error) {
       console.error('Failed to fetch asset history:', error);
     } finally {
@@ -46,8 +30,8 @@ export default function AssetHistory({ assetId, assetName }: AssetHistoryProps) 
     }
   };
 
-  const getChangeIcon = (changeType: string) => {
-    switch (changeType) {
+  const getChangeIcon = (action: string) => {
+    switch (action) {
       case 'create':
         return <TrendingUp className="w-5 h-5 text-green-500" />;
       case 'update':
@@ -62,7 +46,7 @@ export default function AssetHistory({ assetId, assetName }: AssetHistoryProps) 
     }
   };
 
-  const getChangeTypeLabel = (changeType: string) => {
+  const getChangeTypeLabel = (action: string) => {
     const labels: Record<string, string> = {
       create: '创建',
       update: '更新',
@@ -73,7 +57,7 @@ export default function AssetHistory({ assetId, assetName }: AssetHistoryProps) 
       cost_update: '成本更新',
       delete: '删除',
     };
-    return labels[changeType] || changeType;
+    return labels[action] || action;
   };
 
   const formatFieldName = (fieldName: string) => {
@@ -158,12 +142,12 @@ export default function AssetHistory({ assetId, assetName }: AssetHistoryProps) 
                 <div className="absolute -left-2 top-0 w-4 h-4 bg-white rounded-full border-2 border-gray-300"></div>
                 
                 <div className="flex items-start gap-3">
-                  {getChangeIcon(record.changeType)}
+                  {getChangeIcon(record.action)}
                   
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="font-medium text-gray-900">
-                        {getChangeTypeLabel(record.changeType)}
+                        {getChangeTypeLabel(record.action)}
                       </span>
                       <span className="text-sm text-gray-500">
                         {formatTimestamp(record.timestamp)}
@@ -172,15 +156,15 @@ export default function AssetHistory({ assetId, assetName }: AssetHistoryProps) 
                     
                     <div className="text-sm text-gray-600 flex items-center gap-1 mb-2">
                       <User className="w-3 h-3" />
-                      {record.changedBy}
-                      {record.changeReason && (
-                        <span className="ml-2">• 原因: {record.changeReason}</span>
+                      {record.userName}
+                      {record.details?.reason && (
+                        <span className="ml-2">• 原因: {record.details.reason}</span>
                       )}
                     </div>
                     
-                    {record.fieldChanges.length > 0 && (
+                    {record.details?.changes && Array.isArray(record.details.changes) && record.details.changes.length > 0 && (
                       <div className="bg-gray-50 rounded-md p-3 text-sm">
-                        {record.fieldChanges.map((change, index) => (
+                        {record.details.changes.map((change: any, index: number) => (
                           <div key={index} className="flex items-start gap-2 mb-1 last:mb-0">
                             <span className="font-medium text-gray-700 min-w-[80px]">
                               {formatFieldName(change.fieldName)}:

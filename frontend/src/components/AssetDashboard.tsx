@@ -38,18 +38,18 @@ export default function AssetDashboard() {
       
       // Combine data
       setStats({
-        totalAssets: statsRes.data.total || 0,
-        onlineAssets: statsRes.data.online || 0,
-        offlineAssets: statsRes.data.offline || 0,
-        maintenanceAssets: statsRes.data.maintenance || 0,
-        decommissionedAssets: statsRes.data.decommissioned || 0,
-        totalValue: statsRes.data.totalValue || 0,
-        annualCost: statsRes.data.annualCost || 0,
-        assetsByType: statsRes.data.byType || {},
-        assetsByLocation: statsRes.data.byLocation || {},
-        assetsByDepartment: statsRes.data.byDepartment || {},
-        recentChanges: statsRes.data.recentChanges || 0,
-        pendingWorkflows: workflowRes.data.pending || 0,
+        totalAssets: statsRes.total || 0,
+        onlineAssets: statsRes.byStatus?.online || 0,
+        offlineAssets: statsRes.byStatus?.offline || 0,
+        maintenanceAssets: statsRes.byStatus?.maintenance || 0,
+        decommissionedAssets: statsRes.byStatus?.decommissioned || 0,
+        totalValue: statsRes.totalCost || 0,
+        annualCost: statsRes.averageCost || 0,
+        assetsByType: statsRes.byType || {},
+        assetsByLocation: statsRes.byLocation || {},
+        assetsByDepartment: statsRes.byDepartment || {},
+        recentChanges: statsRes.criticalAssets || 0,
+        pendingWorkflows: workflowRes.pending || 0,
       });
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);

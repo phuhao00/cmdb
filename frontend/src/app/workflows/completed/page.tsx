@@ -23,7 +23,7 @@ export default function CompletedWorkflowsPage() {
       setLoading(true);
       const response = await getWorkflows();
       // 过滤出已完成的工作流（包括批准和拒绝的）
-      const completedWorkflows = response.data.filter(
+      const completedWorkflows = response.filter(
         wf => wf.status === 'approved' || wf.status === 'rejected' || wf.status === 'completed'
       );
       setWorkflows(completedWorkflows);
@@ -145,7 +145,7 @@ export default function CompletedWorkflowsPage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-3">
                         {getStatusIcon(workflow.status)}
-                        <h4 className="text-lg font-medium text-gray-900">{workflow.name}</h4>
+                        <h4 className="text-lg font-medium text-gray-900">{workflow.assetName}</h4>
                         <span className={`px-2 py-1 text-xs rounded-full ${
                           workflow.status === 'approved' || workflow.status === 'completed'
                             ? 'bg-green-100 text-green-800'
@@ -154,11 +154,11 @@ export default function CompletedWorkflowsPage() {
                           {getStatusText(workflow.status)}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-500 mt-1">{workflow.description}</p>
+                      <p className="text-sm text-gray-500 mt-1">{workflow.reason}</p>
                       <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                         <div>
                           <span className="text-gray-500">申请人：</span>
-                          <span className="font-medium">{workflow.requestedBy}</span>
+                          <span className="font-medium">{workflow.requesterName}</span>
                         </div>
                         <div>
                           <span className="text-gray-500">类型：</span>
@@ -173,10 +173,10 @@ export default function CompletedWorkflowsPage() {
                           <span className="font-medium">{new Date(workflow.updatedAt).toLocaleDateString()}</span>
                         </div>
                       </div>
-                      {workflow.approvalComments && (
+                      {workflow.details?.comments && (
                         <div className="mt-3 p-3 bg-gray-50 rounded-md">
                           <p className="text-sm text-gray-600">
-                            <span className="font-medium">审批意见：</span> {workflow.approvalComments}
+                            <span className="font-medium">审批意见：</span> {workflow.details?.comments}
                           </p>
                         </div>
                       )}

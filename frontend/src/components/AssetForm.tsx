@@ -34,8 +34,7 @@ export default function AssetForm({ isOpen, onClose, onSubmit, asset, mode = 'cr
     status: 'online',
     location: '',
     description: '',
-    purchasePrice: 0,
-    annualCost: 0,
+    cost: 0,
     department: '',
     owner: '',
     ipAddress: '',
@@ -52,8 +51,7 @@ export default function AssetForm({ isOpen, onClose, onSubmit, asset, mode = 'cr
         status: asset.status,
         location: asset.location,
         description: asset.description,
-        purchasePrice: asset.purchasePrice,
-        annualCost: asset.annualCost,
+        cost: asset.cost || 0,
         department: asset.department || '',
         owner: asset.owner || '',
         ipAddress: asset.ipAddress || '',
@@ -66,8 +64,7 @@ export default function AssetForm({ isOpen, onClose, onSubmit, asset, mode = 'cr
         status: 'online',
         location: '',
         description: '',
-        purchasePrice: 0,
-        annualCost: 0
+        cost: 0
       });
     }
   }, [asset, mode]);
@@ -300,25 +297,12 @@ export default function AssetForm({ isOpen, onClose, onSubmit, asset, mode = 'cr
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    采购价格 (¥)
+                    资产成本 (¥)
                   </label>
                   <input
                     type="number"
-                    value={formData.purchasePrice}
-                    onChange={(e) => setFormData({ ...formData, purchasePrice: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="0.00"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    年度成本 (¥)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.annualCost}
-                    onChange={(e) => setFormData({ ...formData, annualCost: parseFloat(e.target.value) || 0 })}
+                    value={formData.cost}
+                    onChange={(e) => setFormData({ ...formData, cost: parseFloat(e.target.value) || 0 })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                     placeholder="0.00"
                   />
