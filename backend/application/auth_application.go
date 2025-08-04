@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"github.com/cmdb/backend/domain/model"
-	"github.com/cmdb/backend/domain/service"
+	"github.com/phuhao00/cmdb/backend/domain/model"
+	"github.com/phuhao00/cmdb/backend/domain/service"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -35,15 +35,15 @@ type LoginResponseDTO struct {
 
 // UserDTO represents user data for API responses
 type UserDTO struct {
-	ID          string                `json:"id"`
-	Username    string                `json:"username"`
-	Email       string                `json:"email"`
-	FullName    string                `json:"fullName"`
-	Role        string                `json:"role"`
-	Status      string                `json:"status"`
-	Permissions []model.Permission    `json:"permissions"`
-	LastLoginAt *string               `json:"lastLoginAt"`
-	CreatedAt   string                `json:"createdAt"`
+	ID          string             `json:"id"`
+	Username    string             `json:"username"`
+	Email       string             `json:"email"`
+	FullName    string             `json:"fullName"`
+	Role        string             `json:"role"`
+	Status      string             `json:"status"`
+	Permissions []model.Permission `json:"permissions"`
+	LastLoginAt *string            `json:"lastLoginAt"`
+	CreatedAt   string             `json:"createdAt"`
 }
 
 // CreateUserDTO represents create user request data
@@ -97,10 +97,10 @@ func (a *AuthApplication) ValidateToken(ctx context.Context, token string) (*Use
 // CreateUser creates a new user
 func (a *AuthApplication) CreateUser(ctx context.Context, dto CreateUserDTO) (*UserDTO, error) {
 	role := model.UserRole(dto.Role)
-	
+
 	// Validate role
-	if role != model.AdminRole && role != model.ManagerRole && 
-	   role != model.OperatorRole && role != model.ViewerRole {
+	if role != model.AdminRole && role != model.ManagerRole &&
+		role != model.OperatorRole && role != model.ViewerRole {
 		return nil, errors.New("invalid role")
 	}
 
@@ -189,4 +189,4 @@ func (a *AuthApplication) userToDTO(user *model.User) *UserDTO {
 	}
 
 	return dto
-} 
+}

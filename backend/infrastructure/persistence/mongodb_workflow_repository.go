@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cmdb/backend/domain/model"
-	"github.com/cmdb/backend/domain/repository"
+	"github.com/phuhao00/cmdb/backend/domain/model"
+	"github.com/phuhao00/cmdb/backend/domain/repository"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -21,7 +21,7 @@ type MongoDBWorkflowRepository struct {
 // NewMongoDBWorkflowRepository creates a new MongoDB workflow repository
 func NewMongoDBWorkflowRepository(db *mongo.Database) repository.WorkflowRepository {
 	collection := db.Collection("workflows")
-	
+
 	// Create indexes
 	indexModels := []mongo.IndexModel{
 		{
@@ -36,13 +36,13 @@ func NewMongoDBWorkflowRepository(db *mongo.Database) repository.WorkflowReposit
 			Keys: bson.D{{Key: "assetId", Value: 1}},
 		},
 	}
-	
+
 	_, err := collection.Indexes().CreateMany(context.Background(), indexModels)
 	if err != nil {
 		// Log error but continue
 		fmt.Printf("Error creating workflow indexes: %v\n", err)
 	}
-	
+
 	return &MongoDBWorkflowRepository{
 		collection: collection,
 	}
@@ -85,21 +85,21 @@ func (r *MongoDBWorkflowRepository) FindAll(ctx context.Context, filter map[stri
 	for k, v := range filter {
 		bsonFilter[k] = v
 	}
-	
+
 	// Set default sort by createdAt descending
 	opts := options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}})
-	
+
 	cursor, err := r.collection.Find(ctx, bsonFilter, opts)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
-	
+
 	var workflows []*model.Workflow
 	if err := cursor.All(ctx, &workflows); err != nil {
 		return nil, err
 	}
-	
+
 	return workflows, nil
 }
 
@@ -107,18 +107,18 @@ func (r *MongoDBWorkflowRepository) FindAll(ctx context.Context, filter map[stri
 func (r *MongoDBWorkflowRepository) FindByAssetID(ctx context.Context, assetID string) ([]*model.Workflow, error) {
 	// Set default sort by createdAt descending
 	opts := options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}})
-	
+
 	cursor, err := r.collection.Find(ctx, bson.M{"assetId": assetID}, opts)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
-	
+
 	var workflows []*model.Workflow
 	if err := cursor.All(ctx, &workflows); err != nil {
 		return nil, err
 	}
-	
+
 	return workflows, nil
 }
 
@@ -130,7 +130,7 @@ func (r *MongoDBWorkflowRepository) Save(ctx context.Context, workflow *model.Wo
 		_, err := r.collection.InsertOne(ctx, workflow)
 		return err
 	}
-	
+
 	// Update existing workflow
 	_, err := r.collection.ReplaceOne(ctx, bson.M{"_id": workflow.ID}, workflow)
 	return err
@@ -149,7 +149,7 @@ func (r *MongoDBWorkflowRepository) Count(ctx context.Context, filter map[string
 	for k, v := range filter {
 		bsonFilter[k] = v
 	}
-	
+
 	return r.collection.CountDocuments(ctx, bsonFilter)
 }
 
@@ -163,30 +163,30 @@ func (r *MongoDBWorkflowRepository) GetWorkflowStats(ctx context.Context) (map[s
 			},
 		},
 	}
-	
+
 	cursor, err := r.collection.Aggregate(ctx, pipeline)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
-	
+
 	var results []bson.M
 	if err := cursor.All(ctx, &results); err != nil {
 		return nil, err
 	}
-	
+
 	stats := make(map[string]int64)
 	var total int64 = 0
-	
+
 	for _, result := range results {
 		status := result["_id"].(string)
 		count := result["count"].(int32)
 		stats[status] = int64(count)
 		total += int64(count)
 	}
-	
+
 	stats["total"] = total
-	
+
 	return stats, nil
 }
 
@@ -200,26 +200,26 @@ func (r *MongoDBWorkflowRepository) GetWorkflowTypeStats(ctx context.Context) (m
 			},
 		},
 	}
-	
+
 	cursor, err := r.collection.Aggregate(ctx, pipeline)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
-	
+
 	var results []bson.M
 	if err := cursor.All(ctx, &results); err != nil {
 		return nil, err
 	}
-	
+
 	stats := make(map[string]int64)
-	
+
 	for _, result := range results {
 		workflowType := result["_id"].(string)
 		count := result["count"].(int32)
 		stats[workflowType] = int64(count)
 	}
-	
+
 	return stats, nil
 }
 

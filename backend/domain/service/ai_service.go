@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cmdb/backend/domain/model"
-	"github.com/cmdb/backend/domain/repository"
+	"github.com/phuhao00/cmdb/backend/domain/model"
+	"github.com/phuhao00/cmdb/backend/domain/repository"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 

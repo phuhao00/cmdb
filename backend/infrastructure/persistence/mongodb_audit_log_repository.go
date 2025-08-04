@@ -9,8 +9,8 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	"github.com/yourusername/cmdb/backend/domain/model"
-	"github.com/yourusername/cmdb/backend/domain/repository"
+	"github.com/phuhao00/cmdb/backend/domain/model"
+	"github.com/phuhao00/cmdb/backend/domain/repository"
 )
 
 // MongoAuditLogRepository implements AuditLogRepository using MongoDB

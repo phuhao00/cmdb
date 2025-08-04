@@ -7,14 +7,14 @@ import (
 	"os"
 	"time"
 
-	"github.com/cmdb/backend/application"
-	"github.com/cmdb/backend/domain/model"
-	"github.com/cmdb/backend/domain/service"
-	"github.com/cmdb/backend/infrastructure/middleware"
-	"github.com/cmdb/backend/infrastructure/persistence"
-	"github.com/cmdb/backend/interfaces/api"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/phuhao00/cmdb/backend/application"
+	"github.com/phuhao00/cmdb/backend/domain/model"
+	"github.com/phuhao00/cmdb/backend/domain/service"
+	"github.com/phuhao00/cmdb/backend/infrastructure/middleware"
+	"github.com/phuhao00/cmdb/backend/infrastructure/persistence"
+	"github.com/phuhao00/cmdb/backend/interfaces/api"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -62,6 +62,7 @@ func main() {
 	reportsHandler := api.NewReportsHandler(assetApp, workflowApp)
 	authHandler := api.NewAuthHandler(authApp)
 	aiHandler := api.NewAIHandler(aiApp)
+	auditLogHandler := api.NewAuditLogHandler(auditLogApp)
 
 	// Setup Gin router
 	gin.SetMode(gin.ReleaseMode)
@@ -174,6 +175,13 @@ func main() {
 			reports.Use(authMiddleware.RequirePermission("reports", "read"))
 			{
 				reportsHandler.RegisterRoutes(reports)
+			}
+
+			// Audit log routes
+			auditLogs := protected.Group("/")
+			auditLogs.Use(authMiddleware.RequirePermission("audit", "read"))
+			{
+				auditLogHandler.RegisterRoutes(auditLogs)
 			}
 
 			// Admin-only user management routes

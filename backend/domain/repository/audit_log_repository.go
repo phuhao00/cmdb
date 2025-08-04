@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/yourusername/cmdb/backend/domain/model"
+	"github.com/phuhao00/cmdb/backend/domain/model"
 )
 
 // AuditLogRepository defines the interface for audit log persistence

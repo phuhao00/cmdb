@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/yourusername/cmdb/backend/domain/model"
-	"github.com/yourusername/cmdb/backend/domain/repository"
-	"github.com/yourusername/cmdb/backend/domain/service"
+	"github.com/phuhao00/cmdb/backend/domain/model"
+	"github.com/phuhao00/cmdb/backend/domain/repository"
+	"github.com/phuhao00/cmdb/backend/domain/service"
 )
 
 // AuditLogApplication handles audit log application logic

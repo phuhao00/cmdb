@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/yourusername/cmdb/backend/domain/model"
-	"github.com/yourusername/cmdb/backend/domain/repository"
+	"github.com/phuhao00/cmdb/backend/domain/model"
+	"github.com/phuhao00/cmdb/backend/domain/repository"
 )
 
 // AuditLogService handles audit log business logic

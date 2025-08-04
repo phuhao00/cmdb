@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/cmdb/backend/domain/model"
-	"github.com/cmdb/backend/domain/repository"
+	"github.com/phuhao00/cmdb/backend/domain/model"
+	"github.com/phuhao00/cmdb/backend/domain/repository"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -14,8 +14,8 @@ import (
 
 // MongoDBUserRepository implements the UserRepository interface using MongoDB
 type MongoDBUserRepository struct {
-	database        *mongo.Database
-	userCollection  *mongo.Collection
+	database          *mongo.Database
+	userCollection    *mongo.Collection
 	sessionCollection *mongo.Collection
 }
 
@@ -23,7 +23,7 @@ type MongoDBUserRepository struct {
 func NewMongoDBUserRepository(database *mongo.Database) repository.UserRepository {
 	userCollection := database.Collection("users")
 	sessionCollection := database.Collection("sessions")
-	
+
 	// Create indexes
 	_, _ = userCollection.Indexes().CreateMany(context.Background(), []mongo.IndexModel{
 		{
@@ -35,14 +35,14 @@ func NewMongoDBUserRepository(database *mongo.Database) repository.UserRepositor
 			Options: options.Index().SetUnique(true),
 		},
 	})
-	
+
 	_, _ = sessionCollection.Indexes().CreateMany(context.Background(), []mongo.IndexModel{
 		{
-			Keys: bson.D{{Key: "token", Value: 1}},
+			Keys:    bson.D{{Key: "token", Value: 1}},
 			Options: options.Index().SetUnique(true),
 		},
 		{
-			Keys: bson.D{{Key: "expiresAt", Value: 1}},
+			Keys:    bson.D{{Key: "expiresAt", Value: 1}},
 			Options: options.Index().SetExpireAfterSeconds(0),
 		},
 	})
@@ -185,4 +185,4 @@ func (r *MongoDBUserRepository) DeleteExpiredSessions(ctx context.Context) error
 func (r *MongoDBUserRepository) DeleteUserSessions(ctx context.Context, userID primitive.ObjectID) error {
 	_, err := r.sessionCollection.DeleteMany(ctx, bson.M{"userId": userID})
 	return err
-} 
+}

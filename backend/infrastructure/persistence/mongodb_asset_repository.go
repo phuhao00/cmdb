@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cmdb/backend/domain/model"
-	"github.com/cmdb/backend/domain/repository"
+	"github.com/phuhao00/cmdb/backend/domain/model"
+	"github.com/phuhao00/cmdb/backend/domain/repository"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -21,19 +21,19 @@ type MongoDBAssetRepository struct {
 // NewMongoDBAssetRepository creates a new MongoDB asset repository
 func NewMongoDBAssetRepository(db *mongo.Database) repository.AssetRepository {
 	collection := db.Collection("assets")
-	
+
 	// Create indexes
 	indexModel := mongo.IndexModel{
 		Keys:    bson.D{{Key: "assetId", Value: 1}},
 		Options: options.Index().SetUnique(true),
 	}
-	
+
 	_, err := collection.Indexes().CreateOne(context.Background(), indexModel)
 	if err != nil {
 		// Log error but continue
 		fmt.Printf("Error creating asset index: %v\n", err)
 	}
-	
+
 	return &MongoDBAssetRepository{
 		collection: collection,
 	}
@@ -66,7 +66,7 @@ func (r *MongoDBAssetRepository) FindAll(ctx context.Context, filter map[string]
 	for k, v := range filter {
 		bsonFilter[k] = v
 	}
-	
+
 	// Handle special filters
 	if search, ok := filter["search"].(string); ok {
 		delete(bsonFilter, "search")
@@ -77,12 +77,12 @@ func (r *MongoDBAssetRepository) FindAll(ctx context.Context, filter map[string]
 			{"description": bson.M{"$regex": search, "$options": "i"}},
 		}
 	}
-	
+
 	if fromDate, ok := filter["fromDate"].(time.Time); ok {
 		delete(bsonFilter, "fromDate")
 		bsonFilter["createdAt"] = bson.M{"$gte": fromDate}
 	}
-	
+
 	if toDate, ok := filter["toDate"].(time.Time); ok {
 		delete(bsonFilter, "toDate")
 		if _, exists := bsonFilter["createdAt"]; exists {
@@ -91,18 +91,18 @@ func (r *MongoDBAssetRepository) FindAll(ctx context.Context, filter map[string]
 			bsonFilter["createdAt"] = bson.M{"$lte": toDate}
 		}
 	}
-	
+
 	cursor, err := r.collection.Find(ctx, bsonFilter)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
-	
+
 	var assets []*model.Asset
 	if err := cursor.All(ctx, &assets); err != nil {
 		return nil, err
 	}
-	
+
 	return assets, nil
 }
 
@@ -114,7 +114,7 @@ func (r *MongoDBAssetRepository) Save(ctx context.Context, asset *model.Asset) e
 		_, err := r.collection.InsertOne(ctx, asset)
 		return err
 	}
-	
+
 	// Update existing asset
 	_, err := r.collection.ReplaceOne(ctx, bson.M{"_id": asset.ID}, asset)
 	return err
@@ -133,7 +133,7 @@ func (r *MongoDBAssetRepository) Count(ctx context.Context, filter map[string]in
 	for k, v := range filter {
 		bsonFilter[k] = v
 	}
-	
+
 	return r.collection.CountDocuments(ctx, bsonFilter)
 }
 
@@ -147,25 +147,25 @@ func (r *MongoDBAssetRepository) GetAssetTypes(ctx context.Context) (map[string]
 			},
 		},
 	}
-	
+
 	cursor, err := r.collection.Aggregate(ctx, pipeline)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
-	
+
 	var results []bson.M
 	if err := cursor.All(ctx, &results); err != nil {
 		return nil, err
 	}
-	
+
 	types := make(map[string]int64)
 	for _, result := range results {
 		assetType := result["_id"].(string)
 		count := result["count"].(int32)
 		types[assetType] = int64(count)
 	}
-	
+
 	return types, nil
 }
 
@@ -179,25 +179,25 @@ func (r *MongoDBAssetRepository) GetAssetLocations(ctx context.Context) (map[str
 			},
 		},
 	}
-	
+
 	cursor, err := r.collection.Aggregate(ctx, pipeline)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
-	
+
 	var results []bson.M
 	if err := cursor.All(ctx, &results); err != nil {
 		return nil, err
 	}
-	
+
 	locations := make(map[string]int64)
 	for _, result := range results {
 		location := result["_id"].(string)
 		count := result["count"].(int32)
 		locations[location] = int64(count)
 	}
-	
+
 	return locations, nil
 }
 
@@ -211,30 +211,30 @@ func (r *MongoDBAssetRepository) GetAssetStats(ctx context.Context) (map[string]
 			},
 		},
 	}
-	
+
 	cursor, err := r.collection.Aggregate(ctx, pipeline)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
-	
+
 	var results []bson.M
 	if err := cursor.All(ctx, &results); err != nil {
 		return nil, err
 	}
-	
+
 	stats := make(map[string]int64)
 	var total int64 = 0
-	
+
 	for _, result := range results {
 		status := result["_id"].(string)
 		count := result["count"].(int32)
 		stats[status] = int64(count)
 		total += int64(count)
 	}
-	
+
 	stats["total"] = total
-	
+
 	return stats, nil
 }
 
@@ -246,17 +246,17 @@ func (r *MongoDBAssetRepository) GenerateAssetID(ctx context.Context, assetType 
 		"storage":     "STG",
 		"workstation": "WS",
 	}
-	
+
 	typePrefix := prefix[assetType]
 	if typePrefix == "" {
 		typePrefix = "AST"
 	}
-	
+
 	// Get count of assets of this type
 	count, err := r.collection.CountDocuments(ctx, bson.M{"type": assetType})
 	if err != nil {
 		return "", err
 	}
-	
+
 	return fmt.Sprintf("%s-%03d", typePrefix, count+1), nil
 }

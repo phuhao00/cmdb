@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/cmdb/backend/domain/model"
-	"github.com/cmdb/backend/domain/service"
+	"github.com/phuhao00/cmdb/backend/domain/model"
+	"github.com/phuhao00/cmdb/backend/domain/service"
 )
 
 // AIApplication provides AI application services

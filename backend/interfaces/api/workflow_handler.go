@@ -3,8 +3,8 @@ package api
 import (
 	"net/http"
 
-	"github.com/cmdb/backend/application"
 	"github.com/gin-gonic/gin"
+	"github.com/phuhao00/cmdb/backend/application"
 )
 
 // WorkflowHandler handles HTTP requests for workflows
@@ -31,7 +31,7 @@ func (h *WorkflowHandler) RegisterRoutes(router *gin.RouterGroup) {
 		workflows.GET("/stats", h.GetWorkflowStats)
 		workflows.GET("/history/:assetId", h.GetAssetWorkflowHistory)
 	}
-	
+
 	// Feishu webhook
 	router.POST("/feishu/webhook", h.HandleFeishuWebhook)
 }
@@ -39,50 +39,50 @@ func (h *WorkflowHandler) RegisterRoutes(router *gin.RouterGroup) {
 // GetWorkflows handles GET /workflows
 func (h *WorkflowHandler) GetWorkflows(c *gin.Context) {
 	var filter application.WorkflowFilterDTO
-	
+
 	// Bind query parameters
 	if err := c.ShouldBindQuery(&filter); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	workflows, err := h.workflowApp.GetWorkflows(c.Request.Context(), filter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, workflows)
 }
 
 // GetWorkflowByID handles GET /workflows/:id
 func (h *WorkflowHandler) GetWorkflowByID(c *gin.Context) {
 	id := c.Param("id")
-	
+
 	workflow, err := h.workflowApp.GetWorkflowByID(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Workflow not found"})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, workflow)
 }
 
 // CreateWorkflow handles POST /workflows
 func (h *WorkflowHandler) CreateWorkflow(c *gin.Context) {
 	var createDTO application.WorkflowCreateDTO
-	
+
 	if err := c.ShouldBindJSON(&createDTO); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	workflow, err := h.workflowApp.CreateWorkflow(c.Request.Context(), createDTO)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusCreated, workflow)
 }
 
@@ -139,18 +139,18 @@ func (h *WorkflowHandler) RejectWorkflow(c *gin.Context) {
 // HandleFeishuWebhook handles POST /feishu/webhook
 func (h *WorkflowHandler) HandleFeishuWebhook(c *gin.Context) {
 	var webhookDTO application.FeishuWebhookDTO
-	
+
 	if err := c.ShouldBindJSON(&webhookDTO); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	err := h.workflowApp.HandleFeishuWebhook(c.Request.Context(), webhookDTO)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{"message": "Webhook processed successfully"})
 }
 
@@ -161,13 +161,13 @@ func (h *WorkflowHandler) GetWorkflowStats(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	typeStats, err := h.workflowApp.GetWorkflowTypeStats(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"statusStats": statusStats,
 		"typeStats":   typeStats,
@@ -177,13 +177,13 @@ func (h *WorkflowHandler) GetWorkflowStats(c *gin.Context) {
 // GetAssetWorkflowHistory handles GET /workflows/history/:assetId
 func (h *WorkflowHandler) GetAssetWorkflowHistory(c *gin.Context) {
 	assetID := c.Param("assetId")
-	
+
 	workflows, err := h.workflowApp.GetAssetWorkflowHistory(c.Request.Context(), assetID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, workflows)
 }
 
@@ -194,7 +194,7 @@ func (h *WorkflowHandler) GetPendingWorkflows(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, workflows)
 }
 
@@ -205,12 +205,12 @@ func (h *WorkflowHandler) GetMyWorkflows(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
 		return
 	}
-	
+
 	workflows, err := h.workflowApp.GetUserWorkflows(c.Request.Context(), userID.(string))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, workflows)
 }

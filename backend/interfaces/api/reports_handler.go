@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/cmdb/backend/application"
 	"github.com/gin-gonic/gin"
+	"github.com/phuhao00/cmdb/backend/application"
 )
 
 // ReportsHandler handles HTTP requests for reports
@@ -106,7 +106,7 @@ func (h *ReportsHandler) GenerateLifecycleReport(c *gin.Context) {
 	for _, asset := range assets {
 		age := int(time.Since(asset.CreatedAt).Hours() / 24)
 		lifecycleStage := getLifecycleStage(asset.Status, age)
-		
+
 		record := []string{
 			asset.AssetID,
 			asset.Name,
@@ -165,7 +165,7 @@ func (h *ReportsHandler) GenerateComplianceReport(c *gin.Context) {
 		assetWorkflows := workflowMap[asset.AssetID]
 		pendingCount := 0
 		var lastWorkflow *application.WorkflowDTO
-		
+
 		for _, workflow := range assetWorkflows {
 			if workflow.Status == "pending" {
 				pendingCount++
@@ -237,7 +237,7 @@ func getComplianceStatus(status string, pendingWorkflows int) string {
 
 func getRiskLevel(status string, pendingWorkflows int, lastUpdated time.Time) string {
 	daysSinceUpdate := int(time.Since(lastUpdated).Hours() / 24)
-	
+
 	if status == "decommissioned" {
 		return "Low"
 	}

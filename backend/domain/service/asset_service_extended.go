@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 
-	"github.com/yourusername/cmdb/backend/domain/model"
+	"github.com/phuhao00/cmdb/backend/domain/model"
 )
 
 // AssetSearchCriteria defines search criteria for assets
@@ -47,7 +47,7 @@ func (s *AssetService) SearchAssets(ctx context.Context, criteria AssetSearchCri
 	}
 
 	// TODO: Implement full text search and tag filtering in repository
-	return s.assetRepo.FindAll(ctx)
+	return s.assetRepo.FindAll(ctx, filter)
 }
 
 // CountAssets counts assets matching the criteria
@@ -72,16 +72,12 @@ func (s *AssetService) CountAssets(ctx context.Context, criteria AssetSearchCrit
 	}
 
 	// TODO: Implement count with filter in repository
-	assets, err := s.assetRepo.FindAll(ctx)
-	if err != nil {
-		return 0, err
-	}
-	return int64(len(assets)), nil
+	return s.assetRepo.Count(ctx, filter)
 }
 
 // GetAllTags retrieves all unique tags across all assets
 func (s *AssetService) GetAllTags(ctx context.Context) ([]string, error) {
-	assets, err := s.assetRepo.FindAll(ctx)
+	assets, err := s.assetRepo.FindAll(ctx, map[string]interface{}{})
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +99,7 @@ func (s *AssetService) GetAllTags(ctx context.Context) ([]string, error) {
 
 // GetDepartments retrieves all unique departments
 func (s *AssetService) GetDepartments(ctx context.Context) ([]string, error) {
-	assets, err := s.assetRepo.FindAll(ctx)
+	assets, err := s.assetRepo.FindAll(ctx, map[string]interface{}{})
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +121,7 @@ func (s *AssetService) GetDepartments(ctx context.Context) ([]string, error) {
 
 // GetOwners retrieves all unique owners
 func (s *AssetService) GetOwners(ctx context.Context) ([]string, error) {
-	assets, err := s.assetRepo.FindAll(ctx)
+	assets, err := s.assetRepo.FindAll(ctx, map[string]interface{}{})
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +141,7 @@ func (s *AssetService) GetOwners(ctx context.Context) ([]string, error) {
 	return owners, nil
 }
 
-// UpdateAsset updates an existing asset
-func (s *AssetService) UpdateAsset(ctx context.Context, asset *model.Asset) error {
-	return s.assetRepo.Update(ctx, asset)
+// SaveAsset saves an asset (create or update)
+func (s *AssetService) SaveAsset(ctx context.Context, asset *model.Asset) error {
+	return s.assetRepo.Save(ctx, asset)
 }

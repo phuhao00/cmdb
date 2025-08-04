@@ -9,8 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	"github.com/yourusername/cmdb/backend/domain/model"
-	"github.com/yourusername/cmdb/backend/domain/repository"
+	"github.com/phuhao00/cmdb/backend/domain/model"
 )
 
 // MongoAssetHistoryRepository implements AssetHistoryRepository using MongoDB
@@ -21,11 +20,11 @@ type MongoAssetHistoryRepository struct {
 // NewMongoAssetHistoryRepository creates a new MongoDB asset history repository
 func NewMongoAssetHistoryRepository(db *mongo.Database) *MongoAssetHistoryRepository {
 	collection := db.Collection("asset_history")
-	
+
 	// Create indexes for better query performance
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	
+
 	indexes := []mongo.IndexModel{
 		{
 			Keys: bson.D{{Key: "assetId", Value: 1}, {Key: "timestamp", Value: -1}},
@@ -40,9 +39,9 @@ func NewMongoAssetHistoryRepository(db *mongo.Database) *MongoAssetHistoryReposi
 			Keys: bson.D{{Key: "timestamp", Value: -1}},
 		},
 	}
-	
+
 	collection.Indexes().CreateMany(ctx, indexes)
-	
+
 	return &MongoAssetHistoryRepository{
 		collection: collection,
 	}
@@ -53,7 +52,7 @@ func (r *MongoAssetHistoryRepository) Create(ctx context.Context, history *model
 	if history.ID.IsZero() {
 		history.ID = primitive.NewObjectID()
 	}
-	
+
 	_, err := r.collection.InsertOne(ctx, history)
 	return err
 }
@@ -62,22 +61,22 @@ func (r *MongoAssetHistoryRepository) Create(ctx context.Context, history *model
 func (r *MongoAssetHistoryRepository) FindByAssetID(ctx context.Context, assetID primitive.ObjectID, limit int) ([]*model.AssetHistory, error) {
 	filter := bson.M{"assetId": assetID}
 	opts := options.Find().SetSort(bson.D{{Key: "timestamp", Value: -1}})
-	
+
 	if limit > 0 {
 		opts.SetLimit(int64(limit))
 	}
-	
+
 	cursor, err := r.collection.Find(ctx, filter, opts)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
-	
+
 	var histories []*model.AssetHistory
 	if err := cursor.All(ctx, &histories); err != nil {
 		return nil, err
 	}
-	
+
 	return histories, nil
 }
 
@@ -90,20 +89,20 @@ func (r *MongoAssetHistoryRepository) FindByDateRange(ctx context.Context, asset
 			"$lte": end,
 		},
 	}
-	
+
 	opts := options.Find().SetSort(bson.D{{Key: "timestamp", Value: -1}})
-	
+
 	cursor, err := r.collection.Find(ctx, filter, opts)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
-	
+
 	var histories []*model.AssetHistory
 	if err := cursor.All(ctx, &histories); err != nil {
 		return nil, err
 	}
-	
+
 	return histories, nil
 }
 
@@ -113,20 +112,20 @@ func (r *MongoAssetHistoryRepository) FindByChangeType(ctx context.Context, asse
 		"assetId":    assetID,
 		"changeType": changeType,
 	}
-	
+
 	opts := options.Find().SetSort(bson.D{{Key: "timestamp", Value: -1}})
-	
+
 	cursor, err := r.collection.Find(ctx, filter, opts)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
-	
+
 	var histories []*model.AssetHistory
 	if err := cursor.All(ctx, &histories); err != nil {
 		return nil, err
 	}
-	
+
 	return histories, nil
 }
 
@@ -134,22 +133,22 @@ func (r *MongoAssetHistoryRepository) FindByChangeType(ctx context.Context, asse
 func (r *MongoAssetHistoryRepository) FindByUser(ctx context.Context, userID string, limit int) ([]*model.AssetHistory, error) {
 	filter := bson.M{"changedById": userID}
 	opts := options.Find().SetSort(bson.D{{Key: "timestamp", Value: -1}})
-	
+
 	if limit > 0 {
 		opts.SetLimit(int64(limit))
 	}
-	
+
 	cursor, err := r.collection.Find(ctx, filter, opts)
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
-	
+
 	var histories []*model.AssetHistory
 	if err := cursor.All(ctx, &histories); err != nil {
 		return nil, err
 	}
-	
+
 	return histories, nil
 }
 
@@ -157,7 +156,7 @@ func (r *MongoAssetHistoryRepository) FindByUser(ctx context.Context, userID str
 func (r *MongoAssetHistoryRepository) GetLatestChange(ctx context.Context, assetID primitive.ObjectID) (*model.AssetHistory, error) {
 	filter := bson.M{"assetId": assetID}
 	opts := options.FindOne().SetSort(bson.D{{Key: "timestamp", Value: -1}})
-	
+
 	var history model.AssetHistory
 	err := r.collection.FindOne(ctx, filter, opts).Decode(&history)
 	if err != nil {
@@ -166,7 +165,7 @@ func (r *MongoAssetHistoryRepository) GetLatestChange(ctx context.Context, asset
 		}
 		return nil, err
 	}
-	
+
 	return &history, nil
 }
 
@@ -183,7 +182,7 @@ func (r *MongoAssetHistoryRepository) DeleteOlderThan(ctx context.Context, times
 			"$lt": timestamp,
 		},
 	}
-	
+
 	_, err := r.collection.DeleteMany(ctx, filter)
 	return err
 }

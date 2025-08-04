@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/cmdb/backend/domain/model"
-	"github.com/cmdb/backend/domain/service"
+	"github.com/phuhao00/cmdb/backend/domain/model"
+	"github.com/phuhao00/cmdb/backend/domain/service"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -35,15 +35,6 @@ type AssetCreateDTO struct {
 	Name        string `json:"name" binding:"required"`
 	Type        string `json:"type" binding:"required"`
 	Location    string `json:"location" binding:"required"`
-	Description string `json:"description"`
-	Requester   string `json:"requester,omitempty"`
-	RequesterID string `json:"requesterId,omitempty"`
-}
-
-// AssetUpdateDTO represents the data for updating an asset
-type AssetUpdateDTO struct {
-	Name        string `json:"name"`
-	Location    string `json:"location"`
 	Description string `json:"description"`
 	Requester   string `json:"requester,omitempty"`
 	RequesterID string `json:"requesterId,omitempty"`
@@ -387,7 +378,8 @@ func (a *AssetApplication) AddAssetTags(ctx context.Context, id string, tags []s
 		asset.AddTag(tag)
 	}
 
-	return a.assetService.UpdateAsset(ctx, asset)
+	_, err = a.assetService.UpdateAsset(ctx, asset.ID, asset.Name, asset.Location, asset.Description)
+	return err
 }
 
 // RemoveAssetTag removes a tag from an asset
@@ -404,7 +396,8 @@ func (a *AssetApplication) RemoveAssetTag(ctx context.Context, id string, tag st
 
 	asset.RemoveTag(tag)
 
-	return a.assetService.UpdateAsset(ctx, asset)
+	_, err = a.assetService.UpdateAsset(ctx, asset.ID, asset.Name, asset.Location, asset.Description)
+	return err
 }
 
 // GetAllTags retrieves all unique tags across all assets

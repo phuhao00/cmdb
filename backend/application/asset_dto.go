@@ -35,6 +35,15 @@ type AssetTagDTO struct {
 
 // AssetUpdateDTO represents update fields for assets
 type AssetUpdateDTO struct {
+	Name        string `json:"name"`
+	Location    string `json:"location"`
+	Description string `json:"description"`
+	Requester   string `json:"requester,omitempty"`
+	RequesterID string `json:"requesterId,omitempty"`
+}
+
+// AssetBulkUpdateDTO represents bulk update fields for assets
+type AssetBulkUpdateDTO struct {
 	Name        string   `json:"name"`
 	Location    string   `json:"location"`
 	Description string   `json:"description"`
