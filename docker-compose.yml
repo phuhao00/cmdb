@@ -63,8 +63,8 @@ services:
       PORT: 3000
       HOSTNAME: "0.0.0.0"
       # API配置 (Next.js使用NEXT_PUBLIC_前缀)
-      NEXT_PUBLIC_API_BASE_URL: http://localhost:8082/api/v1
-      NEXT_PUBLIC_AI_API_BASE_URL: http://localhost:8082/api
+      NEXT_PUBLIC_API_BASE_URL: http://cmdb-api:8081/api/v1
+      NEXT_PUBLIC_AI_API_BASE_URL: http://cmdb-api:8081/api
       NEXT_PUBLIC_API_TIMEOUT: 10000
       NEXT_PUBLIC_AI_API_TIMEOUT: 30000
       NEXT_PUBLIC_DEBUG_MODE: true

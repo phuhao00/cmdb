@@ -4,367 +4,260 @@ db = db.getSiblingDB('cmdb');
 // Create collections
 db.createCollection('assets');
 db.createCollection('workflows');
+db.createCollection('users');
+db.createCollection('audit_logs');
 
 // Create indexes
-db.assets.createIndex({ "assetId": 1 }, { unique: true });
+db.assets.createIndex({ "id": 1 }, { unique: true });
 db.assets.createIndex({ "name": 1 });
 db.assets.createIndex({ "type": 1 });
 db.assets.createIndex({ "status": 1 });
 db.assets.createIndex({ "location": 1 });
+db.assets.createIndex({ "department": 1 });
+db.assets.createIndex({ "owner": 1 });
+db.assets.createIndex({ "tags": 1 });
 
-db.workflows.createIndex({ "workflowId": 1 }, { unique: true });
-db.workflows.createIndex({ "feishuId": 1 }, { unique: true, sparse: true });
+db.workflows.createIndex({ "id": 1 }, { unique: true });
 db.workflows.createIndex({ "assetId": 1 });
 db.workflows.createIndex({ "status": 1 });
 db.workflows.createIndex({ "type": 1 });
 db.workflows.createIndex({ "createdAt": -1 });
 
-// Insert some initial asset types
-db.assetTypes = [
-  { "type": "server", "description": "Physical or virtual server" },
-  { "type": "network", "description": "Network devices like switches, routers, etc." },
-  { "type": "storage", "description": "Storage devices and systems" },
-  { "type": "workstation", "description": "Desktop computers and workstations" }
-];
+db.users.createIndex({ "username": 1 }, { unique: true });
+db.users.createIndex({ "email": 1 }, { unique: true });
 
-// Insert some initial asset statuses
-db.assetStatuses = [
-  { "status": "online", "description": "Asset is online and operational" },
-  { "status": "offline", "description": "Asset is offline or powered down" },
-  { "status": "maintenance", "description": "Asset is under maintenance" },
-  { "status": "decommissioned", "description": "Asset has been decommissioned" }
-];
+db.audit_logs.createIndex({ "timestamp": -1 });
+db.audit_logs.createIndex({ "userId": 1 });
+db.audit_logs.createIndex({ "resourceType": 1, "resourceId": 1 });
 
-// Insert some initial workflow types
-db.workflowTypes = [
-  { "type": "Asset Onboarding", "description": "Process for adding new assets to inventory" },
-  { "type": "Asset Decommission", "description": "Process for removing assets from inventory" },
-  { "type": "Status Change", "description": "Process for changing asset status" },
-  { "type": "Maintenance Request", "description": "Process for requesting asset maintenance" }
-];
-
-// Insert more comprehensive sample assets
-db.assets.insertMany([
-  // Servers
+// Insert users
+db.users.insertMany([
   {
-    "assetId": "SRV-001",
+    "id": "user-001",
+    "username": "admin",
+    "email": "admin@cmdb.local",
+    "fullName": "System Administrator",
+    "role": "admin",
+    "status": "active",
+    "department": "IT",
+    "password": "$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi",
+    "createdAt": new Date(),
+    "updatedAt": new Date()
+  },
+  {
+    "id": "user-002",
+    "username": "john.doe",
+    "email": "john.doe@company.com",
+    "fullName": "John Doe",
+    "role": "user",
+    "status": "active",
+    "department": "Engineering",
+    "password": "$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi",
+    "createdAt": new Date(),
+    "updatedAt": new Date()
+  },
+  {
+    "id": "user-003",
+    "username": "jane.smith",
+    "email": "jane.smith@company.com",
+    "fullName": "Jane Smith",
+    "role": "manager",
+    "status": "active",
+    "department": "Operations",
+    "password": "$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi",
+    "createdAt": new Date(),
+    "updatedAt": new Date()
+  }
+]);
+
+// Insert sample assets
+db.assets.insertMany([
+  {
+    "id": "SRV-001",
     "name": "Web Server 1",
     "type": "server",
     "status": "online",
     "location": "Data Center A - Rack 3 - Position 1",
+    "department": "Engineering",
+    "owner": "John Doe",
+    "ipAddress": "192.168.1.10",
+    "tags": ["production", "web", "critical"],
+    "cost": 5000.00,
+    "purchaseDate": "2024-01-15",
+    "warrantyExpiry": "2027-01-15",
+    "lastMaintenance": "2024-12-01",
+    "nextMaintenance": "2025-03-01",
+    "criticality": "high",
     "description": "Primary web server for customer facing applications",
-    "purchasePrice": 5000.00,
-    "annualCost": 1200.00,
-    "currency": "USD",
-    "createdAt": new Date(),
+    "serialNumber": "SN-WEB-001",
+    "manufacturer": "Dell",
+    "model": "PowerEdge R750",
+    "specifications": {
+      "cpu": "Intel Xeon Gold 6338",
+      "ram": "64GB DDR4",
+      "storage": "2TB NVMe SSD",
+      "network": "10GbE"
+    },
+    "createdAt": new Date("2024-01-15"),
     "updatedAt": new Date()
   },
   {
-    "assetId": "SRV-002",
-    "name": "Web Server 2",
-    "type": "server",
-    "status": "online",
-    "location": "Data Center A - Rack 3 - Position 2",
-    "description": "Secondary web server for customer facing applications",
-    "purchasePrice": 5000.00,
-    "annualCost": 1200.00,
-    "currency": "USD",
-    "createdAt": new Date(),
-    "updatedAt": new Date()
-  },
-  {
-    "assetId": "SRV-003",
+    "id": "SRV-002",
     "name": "Database Server 1",
     "type": "server",
     "status": "online",
     "location": "Data Center A - Rack 5 - Position 1",
+    "department": "Engineering",
+    "owner": "Jane Smith",
+    "ipAddress": "192.168.1.20",
+    "tags": ["production", "database", "critical"],
+    "cost": 8000.00,
+    "purchaseDate": "2024-02-01",
+    "warrantyExpiry": "2027-02-01",
+    "lastMaintenance": "2024-11-15",
+    "nextMaintenance": "2025-02-15",
+    "criticality": "critical",
     "description": "Primary database server for transactional data",
-    "purchasePrice": 8000.00,
-    "annualCost": 2000.00,
-    "currency": "USD",
-    "createdAt": new Date(),
+    "serialNumber": "SN-DB-001",
+    "manufacturer": "HP",
+    "model": "ProLiant DL380",
+    "specifications": {
+      "cpu": "Intel Xeon Platinum 8380",
+      "ram": "128GB DDR4",
+      "storage": "4TB NVMe SSD",
+      "network": "25GbE"
+    },
+    "createdAt": new Date("2024-02-01"),
     "updatedAt": new Date()
   },
   {
-    "assetId": "SRV-004",
-    "name": "Database Server 2",
-    "type": "server",
-    "status": "maintenance",
-    "location": "Data Center A - Rack 5 - Position 2",
-    "description": "Secondary database server for failover",
-    "purchasePrice": 8000.00,
-    "annualCost": 2000.00,
-    "currency": "USD",
-    "createdAt": new Date(),
-    "updatedAt": new Date()
-  },
-  {
-    "assetId": "SRV-005",
-    "name": "Application Server 1",
-    "type": "server",
-    "status": "online",
-    "location": "Data Center A - Rack 7 - Position 1",
-    "description": "Application server for internal business applications",
-    "purchasePrice": 6000.00,
-    "annualCost": 1500.00,
-    "currency": "USD",
-    "createdAt": new Date(),
-    "updatedAt": new Date()
-  },
-  {
-    "assetId": "SRV-006",
-    "name": "Backup Server",
-    "type": "server",
-    "status": "offline",
-    "location": "Data Center A - Rack 9 - Position 1",
-    "description": "Backup and disaster recovery server",
-    "purchasePrice": 4000.00,
-    "annualCost": 1000.00,
-    "currency": "USD",
-    "createdAt": new Date(),
-    "updatedAt": new Date()
-  },
-  // Network equipment
-  {
-    "assetId": "NET-001",
+    "id": "NET-001",
     "name": "Core Switch A",
     "type": "network",
     "status": "online",
     "location": "Data Center A - Network Room - Rack 1",
+    "department": "Operations",
+    "owner": "Jane Smith",
+    "ipAddress": "192.168.1.1",
+    "tags": ["core", "critical", "network"],
+    "cost": 15000.00,
+    "purchaseDate": "2024-01-01",
+    "warrantyExpiry": "2027-01-01",
+    "lastMaintenance": "2024-11-01",
+    "nextMaintenance": "2025-02-01",
+    "criticality": "critical",
     "description": "Primary core switch for data center A",
-    "purchasePrice": 15000.00,
-    "annualCost": 2000.00,
-    "currency": "USD",
-    "createdAt": new Date(),
+    "serialNumber": "SN-CORE-001",
+    "manufacturer": "Cisco",
+    "model": "Catalyst 9300",
+    "specifications": {
+      "ports": "48x 10GbE + 4x 40GbE",
+      "backplane": "1.4Tbps",
+      "power": "PoE+"
+    },
+    "createdAt": new Date("2024-01-01"),
     "updatedAt": new Date()
   },
   {
-    "assetId": "NET-002",
-    "name": "Core Switch B",
-    "type": "network",
-    "status": "online",
-    "location": "Data Center A - Network Room - Rack 2",
-    "description": "Secondary core switch for redundancy",
-    "purchasePrice": 15000.00,
-    "annualCost": 2000.00,
-    "currency": "USD",
-    "createdAt": new Date(),
-    "updatedAt": new Date()
-  },
-  {
-    "assetId": "NET-003",
-    "name": "Firewall",
-    "type": "network",
-    "status": "online",
-    "location": "Data Center A - Network Room - Rack 3",
-    "description": "Main perimeter firewall",
-    "purchasePrice": 10000.00,
-    "annualCost": 1500.00,
-    "currency": "USD",
-    "createdAt": new Date(),
-    "updatedAt": new Date()
-  },
-  {
-    "assetId": "NET-004",
-    "name": "Edge Router",
-    "type": "network",
-    "status": "online",
-    "location": "Data Center A - Network Room - Rack 4",
-    "description": "Main internet gateway router",
-    "purchasePrice": 8000.00,
-    "annualCost": 1200.00,
-    "currency": "USD",
-    "createdAt": new Date(),
-    "updatedAt": new Date()
-  },
-  // Storage systems
-  {
-    "assetId": "STG-001",
+    "id": "STG-001",
     "name": "SAN Storage Array",
     "type": "storage",
     "status": "online",
     "location": "Data Center A - Storage Room - Rack 1",
+    "department": "Operations",
+    "owner": "Jane Smith",
+    "ipAddress": "192.168.1.50",
+    "tags": ["storage", "san", "critical"],
+    "cost": 30000.00,
+    "purchaseDate": "2024-02-01",
+    "warrantyExpiry": "2027-02-01",
+    "lastMaintenance": "2024-10-01",
+    "nextMaintenance": "2025-01-01",
+    "criticality": "critical",
     "description": "Primary storage array for production data",
-    "purchasePrice": 30000.00,
-    "annualCost": 5000.00,
-    "currency": "USD",
-    "createdAt": new Date(),
+    "serialNumber": "SN-SAN-001",
+    "manufacturer": "NetApp",
+    "model": "AFF A400",
+    "specifications": {
+      "capacity": "100TB",
+      "performance": "500K IOPS",
+      "interfaces": "16x 10GbE + 4x 40GbE"
+    },
+    "createdAt": new Date("2024-02-01"),
     "updatedAt": new Date()
   },
   {
-    "assetId": "STG-002",
-    "name": "NAS Storage",
-    "type": "storage",
-    "status": "online",
-    "location": "Data Center A - Storage Room - Rack 2",
-    "description": "Network attached storage for file shares",
-    "purchasePrice": 12000.00,
-    "annualCost": 2000.00,
-    "currency": "USD",
-    "createdAt": new Date(),
-    "updatedAt": new Date()
-  },
-  // Workstations
-  {
-    "assetId": "WS-001",
+    "id": "WS-001",
     "name": "Developer Workstation 1",
     "type": "workstation",
     "status": "online",
     "location": "Office Building - 2nd Floor - Cube A1",
+    "department": "Engineering",
+    "owner": "John Doe",
+    "ipAddress": "192.168.2.10",
+    "tags": ["developer", "workstation"],
+    "cost": 2000.00,
+    "purchaseDate": "2024-03-01",
+    "warrantyExpiry": "2027-03-01",
+    "lastMaintenance": "2024-12-01",
+    "nextMaintenance": "2025-03-01",
+    "criticality": "low",
     "description": "Developer workstation for engineering team",
-    "purchasePrice": 2000.00,
-    "annualCost": 500.00,
-    "currency": "USD",
-    "createdAt": new Date(),
-    "updatedAt": new Date()
-  },
-  {
-    "assetId": "WS-002",
-    "name": "Developer Workstation 2",
-    "type": "workstation",
-    "status": "online",
-    "location": "Office Building - 2nd Floor - Cube A2",
-    "description": "Developer workstation for engineering team",
-    "purchasePrice": 2000.00,
-    "annualCost": 500.00,
-    "currency": "USD",
-    "createdAt": new Date(),
-    "updatedAt": new Date()
-  },
-  {
-    "assetId": "WS-003",
-    "name": "Manager Workstation",
-    "type": "workstation",
-    "status": "offline",
-    "location": "Office Building - 1st Floor - Office B",
-    "description": "Manager workstation",
-    "purchasePrice": 2500.00,
-    "annualCost": 600.00,
-    "currency": "USD",
-    "createdAt": new Date(),
-    "updatedAt": new Date()
-  },
-  {
-    "assetId": "WS-004",
-    "name": "HR Workstation",
-    "type": "workstation",
-    "status": "online",
-    "location": "Office Building - 1st Floor - Cube C",
-    "description": "HR department workstation",
-    "purchasePrice": 1800.00,
-    "annualCost": 450.00,
-    "currency": "USD",
-    "createdAt": new Date(),
+    "serialNumber": "SN-WS-001",
+    "manufacturer": "Dell",
+    "model": "Precision 3650",
+    "specifications": {
+      "cpu": "Intel Core i7-12700",
+      "ram": "32GB DDR4",
+      "storage": "1TB NVMe SSD",
+      "gpu": "NVIDIA RTX 3060"
+    },
+    "createdAt": new Date("2024-03-01"),
     "updatedAt": new Date()
   }
 ]);
 
-// Insert more comprehensive workflows
+// Insert sample workflows
 db.workflows.insertMany([
   {
-    "workflowId": "WF-1000000001",
+    "id": "WF-1000000001",
     "type": "Asset Onboarding",
+    "status": "approved",
     "assetId": "SRV-001",
     "assetName": "Web Server 1",
-    "requester": "System Admin",
-    "priority": "medium",
-    "status": "approved",
+    "requesterId": "user-002",
+    "requesterName": "John Doe",
+    "approverId": "user-001",
+    "approverName": "System Administrator",
     "reason": "New server deployment for production web applications",
-    "feishuId": "FEISHU-1000000001",
-    "createdAt": new Date(new Date().getTime() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
-    "updatedAt": new Date(new Date().getTime() - 29 * 24 * 60 * 60 * 1000)  // 29 days ago
+    "details": {
+      "priority": "high",
+      "department": "Engineering",
+      "budget": 5000.00
+    },
+    "createdAt": new Date(new Date().getTime() - 30 * 24 * 60 * 60 * 1000),
+    "updatedAt": new Date(new Date().getTime() - 29 * 24 * 60 * 60 * 1000),
+    "approvedAt": new Date(new Date().getTime() - 29 * 24 * 60 * 60 * 1000)
   },
   {
-    "workflowId": "WF-1000000002",
-    "type": "Asset Onboarding",
-    "assetId": "SRV-002",
-    "assetName": "Web Server 2",
-    "requester": "System Admin",
-    "priority": "medium",
-    "status": "approved",
-    "reason": "New server deployment for production web applications",
-    "feishuId": "FEISHU-1000000002",
-    "createdAt": new Date(new Date().getTime() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
-    "updatedAt": new Date(new Date().getTime() - 29 * 24 * 60 * 60 * 1000)  // 29 days ago
-  },
-  {
-    "workflowId": "WF-1000000003",
-    "type": "Asset Onboarding",
-    "assetId": "SRV-003",
-    "assetName": "Database Server 1",
-    "requester": "DBA Team",
-    "priority": "high",
-    "status": "approved",
-    "reason": "New database server for transactional system",
-    "feishuId": "FEISHU-1000000003",
-    "createdAt": new Date(new Date().getTime() - 25 * 24 * 60 * 60 * 1000), // 25 days ago
-    "updatedAt": new Date(new Date().getTime() - 24 * 24 * 60 * 60 * 1000)  // 24 days ago
-  },
-  {
-    "workflowId": "WF-1000000004",
+    "id": "WF-1000000002",
     "type": "Maintenance Request",
-    "assetId": "SRV-004",
-    "assetName": "Database Server 2",
-    "requester": "DBA Team",
-    "priority": "high",
-    "status": "approved",
-    "reason": "Scheduled maintenance and security patching",
-    "feishuId": "FEISHU-1000000004",
-    "createdAt": new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
-    "updatedAt": new Date(new Date().getTime() - 6 * 24 * 60 * 60 * 1000)  // 6 days ago
-  },
-  {
-    "workflowId": "WF-1000000005",
-    "type": "Status Change",
-    "assetId": "SRV-006",
-    "assetName": "Backup Server",
-    "requester": "System Admin",
-    "priority": "low",
     "status": "pending",
-    "reason": "Preparing backup server for redeployment",
-    "feishuId": "FEISHU-1000000005",
-    "createdAt": new Date(new Date().getTime() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
-    "updatedAt": new Date(new Date().getTime() - 2 * 24 * 60 * 60 * 1000)  // 2 days ago
-  },
-  {
-    "workflowId": "WF-1000000006",
-    "type": "Asset Decommission",
-    "assetId": "WS-003",
-    "assetName": "Manager Workstation",
-    "requester": "IT Support",
-    "priority": "medium",
-    "status": "rejected",
-    "reason": "Employee left the company, need to decommission workstation",
-    "feishuId": "FEISHU-1000000006",
-    "createdAt": new Date(new Date().getTime() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
-    "updatedAt": new Date(new Date().getTime() - 4 * 24 * 60 * 60 * 1000)  // 4 days ago
-  },
-  {
-    "workflowId": "WF-1000000007",
-    "type": "Maintenance Request",
     "assetId": "NET-001",
     "assetName": "Core Switch A",
-    "requester": "Network Admin",
-    "priority": "high",
-    "status": "pending",
+    "requesterId": "user-003",
+    "requesterName": "Jane Smith",
     "reason": "Firmware upgrade required for security patches",
-    "feishuId": "FEISHU-1000000007",
-    "createdAt": new Date(new Date().getTime() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
-    "updatedAt": new Date(new Date().getTime() - 1 * 24 * 60 * 60 * 1000)  // 1 day ago
-  },
-  {
-    "workflowId": "WF-1000000008",
-    "type": "Asset Onboarding",
-    "assetId": "STG-002",
-    "assetName": "NAS Storage",
-    "requester": "Storage Admin",
-    "priority": "medium",
-    "status": "approved",
-    "reason": "Additional file storage for HR and Finance departments",
-    "feishuId": "FEISHU-1000000008",
-    "createdAt": new Date(new Date().getTime() - 15 * 24 * 60 * 60 * 1000), // 15 days ago
-    "updatedAt": new Date(new Date().getTime() - 14 * 24 * 60 * 60 * 1000)  // 14 days ago
+    "details": {
+      "priority": "high",
+      "maintenanceType": "emergency",
+      "estimatedDuration": "2 hours",
+      "riskLevel": "medium"
+    },
+    "createdAt": new Date(new Date().getTime() - 1 * 24 * 60 * 60 * 1000),
+    "updatedAt": new Date(new Date().getTime() - 1 * 24 * 60 * 60 * 1000)
   }
 ]);
 
 print("MongoDB initialization completed successfully");
+print("Default admin credentials: admin / admin123"); 

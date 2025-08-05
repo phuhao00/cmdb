@@ -127,6 +127,9 @@ func main() {
 				assets.GET("/locations", assetHandler.GetAssetLocations)
 				assets.GET("/costs", assetHandler.GetAssetCosts)
 				assets.GET("/critical", assetHandler.GetCriticalAssets)
+				assets.GET("/departments", assetHandler.GetDepartments)
+				assets.GET("/owners", assetHandler.GetOwners)
+				assets.GET("/tags", assetHandler.GetAllTags)
 				assets.GET("/:id", assetHandler.GetAssetByID)
 
 				// Write operations require additional permissions
@@ -142,13 +145,18 @@ func main() {
 				{
 					updateGroup.PUT("/:id", assetHandler.UpdateAsset)
 					updateGroup.PUT("/:id/costs", assetHandler.UpdateAssetCosts)
+					updateGroup.POST("/:id/tags", assetHandler.AddTags)
 				}
 
 				deleteGroup := assets.Group("/")
 				deleteGroup.Use(authMiddleware.RequirePermission("assets", "delete"))
 				{
 					deleteGroup.DELETE("/:id", assetHandler.RequestDecommission)
+					deleteGroup.DELETE("/:id/tags/:tag", assetHandler.RemoveTag)
 				}
+
+				// Search endpoint
+				assets.POST("/search", assetHandler.AdvancedSearch)
 			}
 
 			// Workflow routes
@@ -161,12 +169,19 @@ func main() {
 				workflows.GET("/my", workflowHandler.GetMyWorkflows)
 				workflows.GET("/:id", workflowHandler.GetWorkflowByID)
 
+				// Create workflow
+				createGroup := workflows.Group("/")
+				createGroup.Use(authMiddleware.RequirePermission("workflows", "create"))
+				{
+					createGroup.POST("", workflowHandler.CreateWorkflow)
+				}
+
 				// Approval operations require special permissions
 				approvalGroup := workflows.Group("/")
 				approvalGroup.Use(authMiddleware.RequireApprovalPermission())
 				{
-					approvalGroup.POST("/:id/approve", workflowHandler.ApproveWorkflow)
-					approvalGroup.POST("/:id/reject", workflowHandler.RejectWorkflow)
+					approvalGroup.PUT("/:id/approve", workflowHandler.ApproveWorkflow)
+					approvalGroup.PUT("/:id/reject", workflowHandler.RejectWorkflow)
 				}
 			}
 
