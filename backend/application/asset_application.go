@@ -74,6 +74,21 @@ type AssetFilterDTO struct {
 	ToDate   time.Time `form:"toDate"`
 }
 
+// AssetHistoryDTO represents the data transfer object for asset history
+type AssetHistoryDTO struct {
+	ID           string                 `json:"id"`
+	AssetID      string                 `json:"assetId"`
+	AssetName    string                 `json:"assetName"`
+	ChangeType   string                 `json:"changeType"`
+	ChangedBy    string                 `json:"changedBy"`
+	ChangedByID  string                 `json:"changedById"`
+	FieldChanges []model.FieldChange    `json:"fieldChanges"`
+	OldValues    map[string]interface{} `json:"oldValues"`
+	NewValues    map[string]interface{} `json:"newValues"`
+	ChangeReason string                 `json:"changeReason"`
+	Timestamp    time.Time              `json:"timestamp"`
+}
+
 // AssetApplication provides application services for assets
 type AssetApplication struct {
 	assetService    *service.AssetService
@@ -444,4 +459,38 @@ func (a *AssetApplication) GetDepartments(ctx context.Context) ([]string, error)
 // GetOwners retrieves all unique owners
 func (a *AssetApplication) GetOwners(ctx context.Context) ([]string, error) {
 	return a.assetService.GetOwners(ctx)
+}
+
+// GetAssetHistory gets the history records for a specific asset
+func (a *AssetApplication) GetAssetHistory(ctx context.Context, assetID string) ([]*AssetHistoryDTO, error) {
+	objectID, err := primitive.ObjectIDFromHex(assetID)
+	if err != nil {
+		return nil, err
+	}
+
+	histories, err := a.assetService.GetAssetHistory(ctx, objectID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert to DTOs
+	var dtos []*AssetHistoryDTO
+	for _, history := range histories {
+		dto := &AssetHistoryDTO{
+			ID:           history.ID.Hex(),
+			AssetID:      history.AssetID.Hex(),
+			AssetName:    history.AssetName,
+			ChangeType:   history.ChangeType,
+			ChangedBy:    history.ChangedBy,
+			ChangedByID:  history.ChangedByID,
+			FieldChanges: history.FieldChanges,
+			OldValues:    history.OldValues,
+			NewValues:    history.NewValues,
+			ChangeReason: history.ChangeReason,
+			Timestamp:    history.Timestamp,
+		}
+		dtos = append(dtos, dto)
+	}
+
+	return dtos, nil
 }

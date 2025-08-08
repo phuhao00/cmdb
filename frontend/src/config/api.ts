@@ -32,8 +32,14 @@ const getApiConfig = (): ApiConfig => {
     const hostname = window.location.hostname;
     const port = '8081';
     
-    defaultApiBaseUrl = `${protocol}//${hostname}:${port}/api`;
-    defaultAiApiBaseUrl = `${protocol}//${hostname}:${port}/api`;
+    // 在Docker环境中，使用容器名访问
+    if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+      defaultApiBaseUrl = `${protocol}//${hostname}:${port}/api/v1`;
+      defaultAiApiBaseUrl = `${protocol}//${hostname}:${port}/api`;
+    } else {
+      defaultApiBaseUrl = `${protocol}//${hostname}:${port}/api/v1`;
+      defaultAiApiBaseUrl = `${protocol}//${hostname}:${port}/api`;
+    }
   } else {
     // 服务端默认值
     defaultApiBaseUrl = '/api';

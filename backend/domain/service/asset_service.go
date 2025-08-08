@@ -11,15 +11,17 @@ import (
 
 // AssetService provides domain logic for assets
 type AssetService struct {
-	assetRepo    repository.AssetRepository
-	workflowRepo repository.WorkflowRepository
+	assetRepo        repository.AssetRepository
+	workflowRepo     repository.WorkflowRepository
+	assetHistoryRepo repository.AssetHistoryRepository
 }
 
 // NewAssetService creates a new asset service
-func NewAssetService(assetRepo repository.AssetRepository, workflowRepo repository.WorkflowRepository) *AssetService {
+func NewAssetService(assetRepo repository.AssetRepository, workflowRepo repository.WorkflowRepository, assetHistoryRepo repository.AssetHistoryRepository) *AssetService {
 	return &AssetService{
-		assetRepo:    assetRepo,
-		workflowRepo: workflowRepo,
+		assetRepo:        assetRepo,
+		workflowRepo:     workflowRepo,
+		assetHistoryRepo: assetHistoryRepo,
 	}
 }
 
@@ -373,4 +375,9 @@ func (s *AssetService) CreateAssetUpdateWorkflow(ctx context.Context, id primiti
 	}
 
 	return workflow, nil
+}
+
+// GetAssetHistory gets the history records for a specific asset
+func (s *AssetService) GetAssetHistory(ctx context.Context, assetID primitive.ObjectID) ([]*model.AssetHistory, error) {
+	return s.assetHistoryRepo.FindByAssetID(ctx, assetID, 100) // Limit to 100 most recent records
 }

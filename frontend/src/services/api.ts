@@ -1,8 +1,8 @@
 import axios, { AxiosResponse } from 'axios';
 
 // API配置
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://cmdb-api:8081/api/v1';
-const AI_API_BASE_URL = process.env.NEXT_PUBLIC_AI_API_BASE_URL || 'http://cmdb-api:8081/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8081/api/v1';
+const AI_API_BASE_URL = process.env.NEXT_PUBLIC_AI_API_BASE_URL || 'http://localhost:8081/api';
 
 // 创建axios实例
 const apiClient = axios.create({

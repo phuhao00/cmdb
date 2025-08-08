@@ -1,11 +1,13 @@
 package api
 
 import (
+	"encoding/csv"
+	"fmt"
 	"net/http"
 	"time"
 
-	"github.com/phuhao00/cmdb/backend/application"
 	"github.com/gin-gonic/gin"
+	"github.com/phuhao00/cmdb/backend/application"
 )
 
 // AssetHandler handles HTTP requests for assets
@@ -47,6 +49,12 @@ func (h *AssetHandler) RegisterRoutes(router *gin.RouterGroup) {
 		assets.POST("/search", h.AdvancedSearch)
 		assets.GET("/departments", h.GetDepartments)
 		assets.GET("/owners", h.GetOwners)
+
+		// Export endpoints
+		assets.GET("/export", h.ExportAssets)
+
+		// History endpoints
+		assets.GET("/:id/history", h.GetAssetHistory)
 	}
 }
 
@@ -391,4 +399,74 @@ func (h *AssetHandler) GetOwners(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"owners": owners})
+}
+
+// ExportAssets handles GET /assets/export
+func (h *AssetHandler) ExportAssets(c *gin.Context) {
+	format := c.Query("format")
+	if format == "" {
+		format = "csv"
+	}
+
+	// Get all assets
+	assets, err := h.assetApp.GetAssets(c.Request.Context(), application.AssetFilterDTO{})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Set response headers for CSV download
+	c.Header("Content-Type", "text/csv")
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=assets-export-%s.csv", time.Now().Format("2006-01-02")))
+
+	// Create CSV writer
+	writer := csv.NewWriter(c.Writer)
+	defer writer.Flush()
+
+	// Write CSV headers
+	headers := []string{"Asset ID", "Name", "Type", "Status", "Location", "Department", "Owner", "IP Address", "Cost", "Purchase Date", "Warranty Expiry", "Description", "Serial Number", "Manufacturer", "Model", "Created At", "Updated At"}
+	if err := writer.Write(headers); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to write CSV headers"})
+		return
+	}
+
+	// Write asset data
+	for _, asset := range assets {
+		record := []string{
+			asset.AssetID,
+			asset.Name,
+			asset.Type,
+			asset.Status,
+			asset.Location,
+			asset.Department,
+			asset.Owner,
+			asset.IPAddress,
+			fmt.Sprintf("%.2f", asset.Cost),
+			asset.PurchaseDate.Format("2006-01-02"),
+			asset.WarrantyExpiry.Format("2006-01-02"),
+			asset.Description,
+			asset.SerialNumber,
+			asset.Manufacturer,
+			asset.Model,
+			asset.CreatedAt.Format("2006-01-02 15:04:05"),
+			asset.UpdatedAt.Format("2006-01-02 15:04:05"),
+		}
+		if err := writer.Write(record); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to write CSV record"})
+			return
+		}
+	}
+}
+
+// GetAssetHistory handles GET /assets/:id/history
+func (h *AssetHandler) GetAssetHistory(c *gin.Context) {
+	id := c.Param("id")
+
+	histories, err := h.assetApp.GetAssetHistory(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, histories)
 }

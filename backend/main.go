@@ -44,9 +44,10 @@ func main() {
 	workflowRepo := persistence.NewMongoDBWorkflowRepository(database)
 	userRepo := persistence.NewMongoDBUserRepository(database)
 	auditLogRepo := persistence.NewMongoAuditLogRepository(database)
+	assetHistoryRepo := persistence.NewMongoAssetHistoryRepository(database)
 
 	// Initialize services
-	assetService := service.NewAssetService(assetRepo, workflowRepo)
+	assetService := service.NewAssetService(assetRepo, workflowRepo, assetHistoryRepo)
 	workflowService := service.NewWorkflowService(workflowRepo, assetRepo)
 	authService := service.NewAuthService(userRepo)
 	aiService := service.NewAIService(assetService, workflowService, userRepo)
@@ -81,7 +82,7 @@ func main() {
 
 	// CORS middleware
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000", "http://localhost:8080", "*"},
+		AllowOrigins:     []string{"http://localhost:3000", "http://localhost:8080", "http://127.0.0.1:3000", "*"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Accept"},
 		ExposeHeaders:    []string{"Content-Length"},
