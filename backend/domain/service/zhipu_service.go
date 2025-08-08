@@ -2,13 +2,14 @@ package service
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"strings"
 	"time"
 
 	zhipu "github.com/itcwc/go-zhipu/model_api"
 	"github.com/itcwc/go-zhipu/utils"
+	"github.com/phuhao00/cmdb/backend/infrastructure/logging"
+	"go.uber.org/zap"
 )
 
 // ZhipuService 智普AI服务
@@ -39,7 +40,9 @@ type ChatResponse struct {
 func NewZhipuService() *ZhipuService {
 	apiKey := os.Getenv("ZHIPU_API_KEY")
 	if apiKey == "" {
-		log.Println("Warning: ZHIPU_API_KEY not set, AI chat will use mock responses")
+		logging.Logger.Warn("zhipu_api_key_missing", zap.String("component", "zhipu_service"))
+	} else {
+		logging.Logger.Info("zhipu_service_initialized")
 	}
 
 	return &ZhipuService{
@@ -59,7 +62,7 @@ func (s *ZhipuService) Chat(request ChatRequest) (*ChatResponse, error) {
 	expireTime := time.Now().Add(1 * time.Hour).Unix()
 	token, err := utils.GenerateToken(s.apiKey, expireTime)
 	if err != nil {
-		log.Printf("Failed to generate token: %v", err)
+		logging.Logger.Error("zhipu_token_generation_failed", zap.Error(err))
 		return s.getMockResponse(request)
 	}
 
@@ -91,7 +94,7 @@ func (s *ZhipuService) Chat(request ChatRequest) (*ChatResponse, error) {
 	// 调用智普AI API
 	response, err := zhipu.BeCommonModel(params, token, 30*time.Second)
 	if err != nil {
-		log.Printf("Zhipu API error: %v", err)
+		logging.Logger.Error("zhipu_api_error", zap.Error(err))
 		return s.getMockResponse(request)
 	}
 

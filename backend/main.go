@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"os"
 	"time"
@@ -12,19 +11,29 @@ import (
 	"github.com/phuhao00/cmdb/backend/application"
 	"github.com/phuhao00/cmdb/backend/domain/model"
 	"github.com/phuhao00/cmdb/backend/domain/service"
+	"github.com/phuhao00/cmdb/backend/infrastructure/logging"
 	"github.com/phuhao00/cmdb/backend/infrastructure/middleware"
 	"github.com/phuhao00/cmdb/backend/infrastructure/persistence"
 	"github.com/phuhao00/cmdb/backend/interfaces/api"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.uber.org/zap"
 )
 
 func main() {
+	// Initialize structured logging first
+	if err := logging.Init(); err != nil {
+		panic("failed to init logger: " + err.Error())
+	}
+	defer logging.Sync()
+
+	logger := logging.Logger
+
 	// Initialize MongoDB
 	mongoURI := getEnv("MONGO_URI", "mongodb://localhost:27017")
 	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI(mongoURI))
 	if err != nil {
-		log.Fatal("Failed to connect to MongoDB:", err)
+		logger.Fatal("Failed to connect to MongoDB", zap.Error(err), zap.String("mongo_uri", mongoURI))
 	}
 	defer client.Disconnect(context.Background())
 
@@ -66,7 +75,9 @@ func main() {
 
 	// Setup Gin router
 	gin.SetMode(gin.ReleaseMode)
-	router := gin.Default()
+	router := gin.New()
+	router.Use(gin.Recovery())
+	router.Use(middleware.RequestLogger())
 
 	// CORS middleware
 	router.Use(cors.New(cors.Config{
@@ -215,8 +226,10 @@ func main() {
 
 	// Start server
 	port := getEnv("PORT", "8080")
-	log.Printf("Server starting on port %s", port)
-	log.Fatal(http.ListenAndServe(":"+port, router))
+	logger.Info("server_starting", zap.String("port", port))
+	if err := http.ListenAndServe(":"+port, router); err != nil {
+		logger.Fatal("server_failed", zap.Error(err))
+	}
 }
 
 func createDefaultAdmin(authService *service.AuthService) {
@@ -231,9 +244,9 @@ func createDefaultAdmin(authService *service.AuthService) {
 	// Create default admin user
 	_, err = authService.CreateUser(ctx, "admin", "admin@cmdb.local", "admin123", "System Administrator", model.AdminRole)
 	if err != nil {
-		log.Printf("Warning: Failed to create default admin user: %v", err)
+		logging.Logger.Warn("create_default_admin_failed", zap.Error(err))
 	} else {
-		log.Println("Default admin user created - Username: admin, Password: admin123")
+		logging.Logger.Info("default_admin_created", zap.String("username", "admin"))
 	}
 }
 

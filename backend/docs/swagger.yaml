@@ -1,0 +1,75 @@
+basePath: /api
+host: localhost:8080
+info:
+  contact:
+    email: support@cmdb.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: 企业级 IT 资产管理系统 API 文档
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: CMDB API
+  version: "1.0"
+paths:
+  /assets:
+    get:
+      consumes:
+      - application/json
+      description: 获取所有资产的列表，支持分页和过滤
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 每页数量
+        in: query
+        name: limit
+        type: integer
+      - description: 资产状态
+        in: query
+        name: status
+        type: string
+      - description: 资产类型
+        in: query
+        name: type
+        type: string
+      - description: 位置
+        in: query
+        name: location
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功返回资产列表
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 未授权
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 服务器内部错误
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: 获取资产列表
+      tags:
+      - 资产管理
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
